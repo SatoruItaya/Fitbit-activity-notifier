@@ -7,4 +7,6 @@ URL = "https://notify-api.line.me/api/notify"
 
 def lambda_handler(event, context):
     data = {'message': "send_test"}
-    requests.post(URL, headers=HEADERS, data=data)
+    response = requests.post(URL, headers=HEADERS, data=data)
+    print(response.text)
+
