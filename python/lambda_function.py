@@ -40,8 +40,10 @@ def lambda_handler(event, context):
     authd_client = fitbit.Fitbit(CLIENT_ID, CLIENT_SECRET, access_token=access_token, refresh_token=refresh_token, refresh_cb=update_token)
 
     steps_data = authd_client.time_series('activities/steps', period='1m')
-    print(steps_data)
 
-    data = {'message': steps_data['activities-steps']}
+    print(steps_data)
+    sample_data = steps_data['activities-steps'][0]
+
+    data = {'message': str(sample_data)}
     response = requests.post(URL, headers=HEADERS, data=data)
     print(response.text)
