@@ -3,6 +3,7 @@ import requests
 import fitbit
 import boto3
 from ast import literal_eval
+import datetime
 
 LINE_NOTIFY_TOKEN = os.environ["LINE_NOTIFY_TOKEN"]
 HEADERS = {"Authorization": "Bearer %s" % LINE_NOTIFY_TOKEN}
@@ -41,9 +42,14 @@ def lambda_handler(event, context):
 
     steps_data = authd_client.time_series('activities/steps', period='1m')
 
-    print(steps_data)
-    sample_data = steps_data['activities-steps'][0]
+    weekly_data = 'Weekly Report\n'
 
-    data = {'message': str(sample_data)}
+    for i in range(7):
+        weekly_data += datetime.datetime.strptime(steps_data['activities-steps'][i - 8]['dateTime'], '%Y-%m-%d').strftime('%Y/%m/%d')
+        weekly_data += ' '
+        weekly_data += '{:,}'.format(int(steps_data['activities-steps'][i - 8]['value']))
+        weekly_data += '\n'
+
+    data = {'message': weekly_data}
     response = requests.post(URL, headers=HEADERS, data=data)
     print(response.text)
