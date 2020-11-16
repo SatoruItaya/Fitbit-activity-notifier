@@ -42,10 +42,10 @@ def lambda_handler(event, context):
 
     steps_data = authd_client.time_series('activities/steps', period='1m')
 
-    weekly_data = 'Weekly Report\n'
+    weekly_data = '\nWeekly Report\n'
 
     for i in range(7):
-        weekly_data += datetime.datetime.strptime(steps_data['activities-steps'][i - 8]['dateTime'], '%Y-%m-%d').strftime('%Y/%m/%d')
+        weekly_data += datetime.datetime.strptime(steps_data['activities-steps'][i - 8]['dateTime'], '%Y-%m-%d').strftime('%m/%d(%a)')
         weekly_data += ' '
         weekly_data += '{:,}'.format(int(steps_data['activities-steps'][i - 8]['value']))
         weekly_data += '\n'
