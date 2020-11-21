@@ -29,6 +29,10 @@ def update_token(token):
     return
 
 
+def format_steps(steps):
+    return '{:,}'.format(steps)
+
+
 def lambda_handler(event, context):
 
     refresh_cb_bucket.download_file(REFRESH_CB_FILE_NAME, tmp_file_name)
@@ -42,14 +46,25 @@ def lambda_handler(event, context):
 
     steps_data = authd_client.time_series('activities/steps', period='1m')
 
-    weekly_data = '\nWeekly Report\n'
+    weekly_message = '\nWeekly Report\n\n'
+    weekly_steps = {}
 
     for i in range(7):
-        weekly_data += datetime.datetime.strptime(steps_data['activities-steps'][i - 8]['dateTime'], '%Y-%m-%d').strftime('%m/%d(%a)')
-        weekly_data += ' '
-        weekly_data += '{:,}'.format(int(steps_data['activities-steps'][i - 8]['value']))
-        weekly_data += '\n'
+        date = datetime.datetime.strptime(steps_data['activities-steps'][i - 8]['dateTime'], '%Y-%m-%d').strftime('%m/%d %a')
+        steps = int(steps_data['activities-steps'][i - 8]['value'])
 
-    data = {'message': weekly_data}
+        weekly_message += date + ' ' + format_steps(steps) + '\n'
+        weekly_steps[date] = steps
+
+    max_date_list = [kv[0] for kv in weekly_steps.items() if kv[1] == max(weekly_steps.values())]
+    min_date_list = [kv[0] for kv in weekly_steps.items() if kv[1] == min(weekly_steps.values())]
+    avg = round(sum(weekly_steps.values()) / 7)
+
+    weekly_message += 'Average:' + format_steps(avg) + '\n'
+    weekly_message += 'Max:' + ','.join(max_date_list) + ' ' + format_steps(weekly_steps[max_date_list[0]]) + '\n'
+    weekly_message += 'Min:' + ','.join(min_date_list) + ' ' + format_steps(weekly_steps[min_date_list[0]]) + '\n'
+
+    message = weekly_message
+    data = {'message': message}
     response = requests.post(URL, headers=HEADERS, data=data)
     print(response.text)
