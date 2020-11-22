@@ -4,6 +4,7 @@ import fitbit
 import boto3
 from ast import literal_eval
 import datetime
+from operator import itemgetter
 
 LINE_NOTIFY_TOKEN = os.environ["LINE_NOTIFY_TOKEN"]
 HEADERS = {"Authorization": "Bearer %s" % LINE_NOTIFY_TOKEN}
@@ -34,12 +35,12 @@ def format_steps(steps):
 
 
 def create_weekly_report(yearly_steps_data):
-    weekly_message = '\nWeekly Report\n\n'
+    weekly_message = '\nWeekly Report\n'
     weekly_steps = {}
 
     for i in range(7):
-        date = datetime.datetime.strptime(yearly_steps_data['activities-steps'][i - 7]['dateTime'], '%Y-%m-%d').strftime('%m/%d %a')
-        steps = int(yearly_steps_data['activities-steps'][i - 7]['value'])
+        date = datetime.datetime.strptime(yearly_steps_data[i - 7]['dateTime'], '%Y-%m-%d').strftime('%m/%d %a')
+        steps = yearly_steps_data[i - 7]['value']
 
         weekly_message += date + ' ' + format_steps(steps) + '\n'
         weekly_steps[date] = steps
@@ -53,6 +54,17 @@ def create_weekly_report(yearly_steps_data):
     weekly_message += 'Min:' + ','.join(min_date_list) + ' ' + format_steps(weekly_steps[min_date_list[0]]) + '\n'
 
     return weekly_message
+
+
+def create_yearly_report(yearly_steps_data):
+
+    scores_sorted = sorted(yearly_steps_data, key=lambda x: x['value'], reverse=True)
+
+    yearly_message = '\nYearly Top Records\n'
+
+    for i in range(5):
+        yearly_message += format_steps(scores_sorted[i]['value']) + ' steps' + '(' + datetime.datetime.strptime(scores_sorted[i]['dateTime'], '%Y-%m-%d').strftime('%m/%d') + ')\n'
+    return yearly_message
 
 
 def lambda_handler(event, context):
@@ -71,8 +83,12 @@ def lambda_handler(event, context):
     yearly_steps_data = authd_client.time_series('activities/steps',
                                                  base_date=datetime.date(today.year, 1, 1), end_date=today - datetime.timedelta(days=1))
 
+    for i in yearly_steps_data['activities-steps']:
+        i['value'] = int(i['value'])
+
     message = ''
-    message += create_weekly_report(yearly_steps_data)
+    message += create_weekly_report(yearly_steps_data['activities-steps'])
+    message += create_yearly_report(yearly_steps_data['activities-steps'])
 
     data = {'message': message}
     response = requests.post(URL, headers=HEADERS, data=data)
