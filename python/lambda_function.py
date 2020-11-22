@@ -4,7 +4,6 @@ import fitbit
 import boto3
 from ast import literal_eval
 import datetime
-from operator import itemgetter
 
 LINE_NOTIFY_TOKEN = os.environ["LINE_NOTIFY_TOKEN"]
 HEADERS = {"Authorization": "Bearer %s" % LINE_NOTIFY_TOKEN}
