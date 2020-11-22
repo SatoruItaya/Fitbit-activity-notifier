@@ -33,6 +33,28 @@ def format_steps(steps):
     return '{:,}'.format(steps)
 
 
+def create_weekly_report(yearly_steps_data):
+    weekly_message = '\nWeekly Report\n\n'
+    weekly_steps = {}
+
+    for i in range(7):
+        date = datetime.datetime.strptime(yearly_steps_data['activities-steps'][i - 7]['dateTime'], '%Y-%m-%d').strftime('%m/%d %a')
+        steps = int(yearly_steps_data['activities-steps'][i - 7]['value'])
+
+        weekly_message += date + ' ' + format_steps(steps) + '\n'
+        weekly_steps[date] = steps
+
+    avg = round(sum(weekly_steps.values()) / 7)
+    max_date_list = [kv[0] for kv in weekly_steps.items() if kv[1] == max(weekly_steps.values())]
+    min_date_list = [kv[0] for kv in weekly_steps.items() if kv[1] == min(weekly_steps.values())]
+
+    weekly_message += 'Average:' + format_steps(avg) + '\n'
+    weekly_message += 'Max:' + ','.join(max_date_list) + ' ' + format_steps(weekly_steps[max_date_list[0]]) + '\n'
+    weekly_message += 'Min:' + ','.join(min_date_list) + ' ' + format_steps(weekly_steps[min_date_list[0]]) + '\n'
+
+    return weekly_message
+
+
 def lambda_handler(event, context):
 
     refresh_cb_bucket.download_file(REFRESH_CB_FILE_NAME, tmp_file_name)
@@ -46,27 +68,12 @@ def lambda_handler(event, context):
 
     today = datetime.date.today()
 
-    steps_data = authd_client.time_series('activities/steps', base_date=datetime.date(today.year, 1, 1), end_date=today - datetime.timedelta(days=1))
+    yearly_steps_data = authd_client.time_series('activities/steps',
+                                                 base_date=datetime.date(today.year, 1, 1), end_date=today - datetime.timedelta(days=1))
 
-    weekly_message = '\nWeekly Report\n\n'
-    weekly_steps = {}
+    message = ''
+    message += create_weekly_report(yearly_steps_data)
 
-    for i in range(7):
-        date = datetime.datetime.strptime(steps_data['activities-steps'][i - 7]['dateTime'], '%Y-%m-%d').strftime('%m/%d %a')
-        steps = int(steps_data['activities-steps'][i - 7]['value'])
-
-        weekly_message += date + ' ' + format_steps(steps) + '\n'
-        weekly_steps[date] = steps
-
-    max_date_list = [kv[0] for kv in weekly_steps.items() if kv[1] == max(weekly_steps.values())]
-    min_date_list = [kv[0] for kv in weekly_steps.items() if kv[1] == min(weekly_steps.values())]
-    avg = round(sum(weekly_steps.values()) / 7)
-
-    weekly_message += 'Average:' + format_steps(avg) + '\n'
-    weekly_message += 'Max:' + ','.join(max_date_list) + ' ' + format_steps(weekly_steps[max_date_list[0]]) + '\n'
-    weekly_message += 'Min:' + ','.join(min_date_list) + ' ' + format_steps(weekly_steps[min_date_list[0]]) + '\n'
-
-    message = weekly_message
     data = {'message': message}
     response = requests.post(URL, headers=HEADERS, data=data)
     print(response.text)
