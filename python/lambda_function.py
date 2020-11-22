@@ -42,16 +42,16 @@ def create_weekly_report(yearly_steps_data):
         date = datetime.datetime.strptime(yearly_steps_data[i - 7]['dateTime'], '%Y-%m-%d').strftime('%m/%d %a')
         steps = yearly_steps_data[i - 7]['value']
 
-        weekly_message += date + ' ' + format_steps(steps) + '\n'
+        weekly_message += date + ' ' + format_steps(steps) + ' steps\n'
         weekly_steps[date] = steps
 
     avg = round(sum(weekly_steps.values()) / 7)
     max_date_list = [kv[0] for kv in weekly_steps.items() if kv[1] == max(weekly_steps.values())]
     min_date_list = [kv[0] for kv in weekly_steps.items() if kv[1] == min(weekly_steps.values())]
 
-    weekly_message += 'Average:' + format_steps(avg) + '\n'
-    weekly_message += 'Max:' + ','.join(max_date_list) + ' ' + format_steps(weekly_steps[max_date_list[0]]) + '\n'
-    weekly_message += 'Min:' + ','.join(min_date_list) + ' ' + format_steps(weekly_steps[min_date_list[0]]) + '\n'
+    weekly_message += 'Average:' + format_steps(avg) + ' steps\n'
+    weekly_message += 'Max:' + ','.join(max_date_list) + '\n'
+    weekly_message += 'Min:' + ','.join(min_date_list) + '\n'
 
     return weekly_message
 
@@ -63,7 +63,8 @@ def create_yearly_report(yearly_steps_data):
     yearly_message = '\nYearly Top Records\n'
 
     for i in range(5):
-        yearly_message += format_steps(scores_sorted[i]['value']) + ' steps' + '(' + datetime.datetime.strptime(scores_sorted[i]['dateTime'], '%Y-%m-%d').strftime('%m/%d') + ')\n'
+        yearly_message += format_steps(scores_sorted[i]['value']) + ' steps' \
+            + '(' + datetime.datetime.strptime(scores_sorted[i]['dateTime'], '%Y-%m-%d').strftime('%m/%d') + ')\n'
     return yearly_message
 
 
