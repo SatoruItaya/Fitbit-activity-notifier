@@ -64,6 +64,7 @@ def create_yearly_report(yearly_steps_data):
     for i in range(5):
         yearly_message += format_steps(scores_sorted[i]['value']) + ' steps' \
             + '(' + datetime.datetime.strptime(scores_sorted[i]['dateTime'], '%Y-%m-%d').strftime('%m/%d') + ')\n'
+
     return yearly_message
 
 
