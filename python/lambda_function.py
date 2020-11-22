@@ -44,14 +44,16 @@ def lambda_handler(event, context):
 
     authd_client = fitbit.Fitbit(CLIENT_ID, CLIENT_SECRET, access_token=access_token, refresh_token=refresh_token, refresh_cb=update_token)
 
-    steps_data = authd_client.time_series('activities/steps', period='1m')
+    today = datetime.date.today()
+
+    steps_data = authd_client.time_series('activities/steps', base_date=datetime.date(today.year, 1, 1), end_date=today - datetime.timedelta(days=1))
 
     weekly_message = '\nWeekly Report\n\n'
     weekly_steps = {}
 
     for i in range(7):
-        date = datetime.datetime.strptime(steps_data['activities-steps'][i - 8]['dateTime'], '%Y-%m-%d').strftime('%m/%d %a')
-        steps = int(steps_data['activities-steps'][i - 8]['value'])
+        date = datetime.datetime.strptime(steps_data['activities-steps'][i - 7]['dateTime'], '%Y-%m-%d').strftime('%m/%d %a')
+        steps = int(steps_data['activities-steps'][i - 7]['value'])
 
         weekly_message += date + ' ' + format_steps(steps) + '\n'
         weekly_steps[date] = steps
