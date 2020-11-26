@@ -41,7 +41,7 @@ def create_weekly_report(yearly_steps_data):
     for i in range(7):
         date = datetime.datetime.strptime(yearly_steps_data[i - 7]['dateTime'], '%Y-%m-%d').strftime('%m/%d %a')
         steps = yearly_steps_data[i - 7]['value']
-        previous_weekly_steps += steps = yearly_steps_data[i - 14]['value']
+        previous_weekly_steps += yearly_steps_data[i - 14]['value']
 
         weekly_message += date + ' ' + format_steps(steps) + ' steps\n'
         weekly_steps[date] = steps
