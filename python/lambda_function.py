@@ -36,18 +36,22 @@ def format_steps(steps):
 def create_weekly_report(yearly_steps_data):
     weekly_message = '\nWeekly Report\n'
     weekly_steps = {}
+    previous_weekly_steps = 0
 
     for i in range(7):
         date = datetime.datetime.strptime(yearly_steps_data[i - 7]['dateTime'], '%Y-%m-%d').strftime('%m/%d %a')
         steps = yearly_steps_data[i - 7]['value']
+        previous_weekly_steps += steps = yearly_steps_data[i - 14]['value']
 
         weekly_message += date + ' ' + format_steps(steps) + ' steps\n'
         weekly_steps[date] = steps
 
-    avg = round(sum(weekly_steps.values()) / 7)
+    total = sum(weekly_steps.values())
+    avg = round(total / 7)
     max_date_list = [kv[0] for kv in weekly_steps.items() if kv[1] == max(weekly_steps.values())]
     min_date_list = [kv[0] for kv in weekly_steps.items() if kv[1] == min(weekly_steps.values())]
 
+    weekly_message += 'Total:' + format_steps(total) + ' steps' + '(' + 'sign: {:+}'.format(total - previous_weekly_steps) + ')'
     weekly_message += 'Average:' + format_steps(avg) + ' steps\n'
     weekly_message += 'Max:' + ','.join(max_date_list) + '\n'
     weekly_message += 'Min:' + ','.join(min_date_list) + '\n'
