@@ -91,6 +91,12 @@ def lambda_handler(event, context):
     for i in yearly_steps_data['activities-steps']:
         i['value'] = int(i['value'])
 
+    # create map {key:date, value:step}
+    lifetime_steps_dict = {}
+    lifetime_steps_data = authd_client.time_series('activities/steps', period='max')
+    for i in lifetime_steps_data['activities-steps'][:-1]:
+        lifetime_steps_dict[datetime.datetime.strptime(i['dateTime'], '%Y-%m-%d')] = int(i['value'])
+
     message = ''
     message += create_weekly_report(yearly_steps_data['activities-steps'])
     message += '======================'
