@@ -18,6 +18,8 @@ s3 = boto3.resource('s3')
 refresh_cb_bucket = s3.Bucket(REFRESH_CB_BUCKET_NAME)
 tmp_file_name = '/tmp/token.txt'
 
+today = datetime.date.today()
+
 
 def update_token(token):
 
@@ -33,15 +35,15 @@ def format_steps(steps):
     return '{:,}'.format(steps)
 
 
-def create_weekly_report(yearly_steps_data):
+def create_weekly_report(steps_dict):
     weekly_message = '\nWeekly Report\n'
     weekly_steps = {}
     previous_weekly_steps = 0
 
     for i in range(7):
-        date = datetime.datetime.strptime(yearly_steps_data[i - 7]['dateTime'], '%Y-%m-%d').strftime('%m/%d %a')
-        steps = yearly_steps_data[i - 7]['value']
-        previous_weekly_steps += yearly_steps_data[i - 14]['value']
+        date = (today - datetime.timedelta(days=7 - i)).strftime('%m/%d %a')
+        steps = steps_dict[(today - datetime.timedelta(days=7 - i)).strftime('%Y-%m-%d')]
+        previous_weekly_steps += steps_dict[(today - datetime.timedelta(days=14 - i)).strftime('%Y-%m-%d')]
 
         weekly_message += date + ' ' + format_steps(steps) + ' steps\n'
         weekly_steps[date] = steps
@@ -83,8 +85,6 @@ def lambda_handler(event, context):
 
     authd_client = fitbit.Fitbit(CLIENT_ID, CLIENT_SECRET, access_token=access_token, refresh_token=refresh_token, refresh_cb=update_token)
 
-    today = datetime.date.today()
-
     yearly_steps_data = authd_client.time_series('activities/steps',
                                                  base_date=datetime.date(today.year, 1, 1), end_date=today - datetime.timedelta(days=1))
 
@@ -95,10 +95,10 @@ def lambda_handler(event, context):
     lifetime_steps_dict = {}
     lifetime_steps_data = authd_client.time_series('activities/steps', period='max')
     for i in lifetime_steps_data['activities-steps'][:-1]:
-        lifetime_steps_dict[datetime.datetime.strptime(i['dateTime'], '%Y-%m-%d')] = int(i['value'])
+        lifetime_steps_dict[datetime.datetime.strptime(i['dateTime'], '%Y-%m-%d').strftime('%Y-%m-%d')] = int(i['value'])
 
     message = ''
-    message += create_weekly_report(yearly_steps_data['activities-steps'])
+    message += create_weekly_report(lifetime_steps_dict)
     message += '======================'
     message += create_yearly_report(yearly_steps_data['activities-steps'])
 
