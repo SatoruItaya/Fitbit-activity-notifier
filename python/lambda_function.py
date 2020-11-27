@@ -63,7 +63,7 @@ def create_yearly_report(yearly_steps_data):
 
     scores_sorted = sorted(yearly_steps_data, key=lambda x: x['value'], reverse=True)
 
-    yearly_message = '\n\nYearly Top Records\n'
+    yearly_message = '\nTop Records in This Year\n'
 
     for i in range(5):
         yearly_message += format_steps(scores_sorted[i]['value']) + ' steps' \
@@ -93,6 +93,7 @@ def lambda_handler(event, context):
 
     message = ''
     message += create_weekly_report(yearly_steps_data['activities-steps'])
+    message += '======================'
     message += create_yearly_report(yearly_steps_data['activities-steps'])
 
     data = {'message': message}
