@@ -61,15 +61,16 @@ def create_weekly_report(steps_dict):
     return weekly_message
 
 
-def create_yearly_report(yearly_steps_data):
+def create_yearly_top_report(steps_dict):
 
-    scores_sorted = sorted(yearly_steps_data, key=lambda x: x['value'], reverse=True)
-
+    yearly_steps_dict = {k: v for k, v in steps_dict.items() if k > datetime.datetime(today.year, 1, 1)}
+    sorted_yearly_steps_dict = sorted(yearly_steps_dict.items(), key=lambda x: x[1], reverse=True)
+    print(sorted_yearly_steps_dict)
     yearly_message = '\nTop Records in This Year\n'
 
     for i in range(5):
-        yearly_message += format_steps(scores_sorted[i]['value']) + ' steps' \
-            + '(' + datetime.datetime.strptime(scores_sorted[i]['dateTime'], '%Y-%m-%d').strftime('%m/%d') + ')\n'
+        yearly_message += format_steps(sorted_yearly_steps_dict[i][1]) + ' steps' \
+            + '(' + sorted_yearly_steps_dict[i][0].strftime('%m/%d') + ')\n'
 
     return yearly_message
 
@@ -92,15 +93,17 @@ def lambda_handler(event, context):
         i['value'] = int(i['value'])
 
     # create map {key:date, value:step}
-    lifetime_steps_dict = {}
+    lifetime_steps_str_dict = {}
+    lifetime_steps_date_dict = {}
     lifetime_steps_data = authd_client.time_series('activities/steps', period='max')
     for i in lifetime_steps_data['activities-steps'][:-1]:
-        lifetime_steps_dict[datetime.datetime.strptime(i['dateTime'], '%Y-%m-%d').strftime('%Y-%m-%d')] = int(i['value'])
+        lifetime_steps_str_dict[datetime.datetime.strptime(i['dateTime'], '%Y-%m-%d').strftime('%Y-%m-%d')] = int(i['value'])
+        lifetime_steps_date_dict[datetime.datetime.strptime(i['dateTime'], '%Y-%m-%d')] = int(i['value'])
 
     message = ''
-    message += create_weekly_report(lifetime_steps_dict)
+    message += create_weekly_report(lifetime_steps_str_dict)
     message += '======================'
-    message += create_yearly_report(yearly_steps_data['activities-steps'])
+    message += create_yearly_top_report(lifetime_steps_date_dict)
 
     data = {'message': message}
     response = requests.post(URL, headers=HEADERS, data=data)
