@@ -72,8 +72,8 @@ def create_weekly_report(steps_dict):
 
 def create_yearly_top_report(steps_dict):
 
-    yearly_steps_dict = {k: v for k, v in steps_dict.items() if k > datetime.datetime(today.year, 1, 1)}
-    sorted_yearly_steps = sorted(yearly_steps_dict.items(), key=lambda x: x[1], reverse=True)
+    year_steps_dict = {k: v for k, v in steps_dict.items() if k > datetime.datetime(today.year, 1, 1)}
+    sorted_yearly_steps = sorted(year_steps_dict.items(), key=lambda x: x[1], reverse=True)
     yearly_message = '\nTop Records in This Year\n'
 
     for i in range(5):
