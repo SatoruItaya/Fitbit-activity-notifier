@@ -56,9 +56,9 @@ def create_weekly_report(steps_dict):
 
     one_week_steps_dict = {k: v for k, v in two_weeks_steps_dict.items() if k >= today - datetime.timedelta(days=8)}
     max_date_list = [kv[0].strftime('%m/%d') for kv in one_week_steps_dict.items()
-                     if kv[0] >= today - datetime.timedelta(days=8) and kv[1] == max(one_week_steps_dict.values())]
+                     if kv[1] == max(one_week_steps_dict.values())]
     min_date_list = [kv[0].strftime('%m/%d') for kv in one_week_steps_dict.items()
-                     if kv[0] >= today - datetime.timedelta(days=8) and kv[1] == min(one_week_steps_dict.values())]
+                     if kv[1] == min(one_week_steps_dict.values())]
 
     message += '\n'
     message += 'Total: ' + format_steps(week_steps) + ' steps ' + \
