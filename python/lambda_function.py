@@ -51,7 +51,7 @@ def create_weekly_report(steps_dict):
         week_steps += steps
         previous_week_steps += sorted_week_steps[i][1]
 
-        message += date + ' ' + format_steps(steps) + ' steps\n'
+        message += date + ' ' + format_steps(steps) + '\n'
 
     avg = round(week_steps / 7)
 
@@ -62,9 +62,9 @@ def create_weekly_report(steps_dict):
                      if kv[1] == min(one_week_steps_dict.values())]
 
     message += '\n'
-    message += 'Total: ' + format_steps(week_steps) + ' steps ' + \
+    message += 'Total: ' + format_steps(week_steps) + \
         '(' + '{:+,}'.format(week_steps - previous_week_steps) + ')\n'
-    message += 'Average: ' + format_steps(avg) + ' steps\n'
+    message += 'Average: ' + format_steps(avg) + '\n'
     message += 'Max: ' + ','.join(max_date_list) + '\n'
     message += 'Min: ' + ','.join(min_date_list) + '\n'
 
@@ -79,8 +79,8 @@ def create_yearly_top_records_report(steps_dict):
     message = 'Top Records in This Year\n\n'
 
     for i in range(5):
-        message += format_steps(sorted_year_steps[i][1]) + ' steps' \
-            + '(' + sorted_year_steps[i][0].strftime('%m/%d') + ')\n'
+        message += format_steps(sorted_year_steps[i][1]) + \
+            '(' + sorted_year_steps[i][0].strftime('%m/%d') + ')\n'
 
     return message
 
@@ -92,8 +92,8 @@ def create_lifetime_top_records_report(steps_dict):
     message = 'Top Records in Lifetime\n\n'
 
     for i in range(5):
-        message += format_steps(sorted_lifetime_steps[i][1]) + ' steps' \
-            + '(' + sorted_lifetime_steps[i][0].strftime('%Y/%m/%d') + ')\n'
+        message += format_steps(sorted_lifetime_steps[i][1]) + \
+            '(' + sorted_lifetime_steps[i][0].strftime('%Y/%m/%d') + ')\n'
 
     return message
 
