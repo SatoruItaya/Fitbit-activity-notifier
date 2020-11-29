@@ -73,14 +73,17 @@ def create_weekly_report(steps_dict):
 def create_yearly_top_report(steps_dict):
 
     year_steps_dict = {k: v for k, v in steps_dict.items() if k > datetime.datetime(today.year, 1, 1)}
-    sorted_yearly_steps = sorted(year_steps_dict.items(), key=lambda x: x[1], reverse=True)
+    sorted_year_steps = sorted(year_steps_dict.items(), key=lambda x: x[1], reverse=True)
     yearly_message = '\nTop Records in This Year\n'
 
     for i in range(5):
-        yearly_message += format_steps(sorted_yearly_steps[i][1]) + ' steps' \
-            + '(' + sorted_yearly_steps[i][0].strftime('%m/%d') + ')\n'
+        yearly_message += format_steps(sorted_year_steps[i][1]) + ' steps' \
+            + '(' + sorted_year_steps[i][0].strftime('%m/%d') + ')\n'
 
     return yearly_message
+
+
+def create_lifetime_top_report(steps_dict):
 
 
 def lambda_handler(event, context):
