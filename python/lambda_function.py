@@ -107,14 +107,8 @@ def lambda_handler(event, context):
     access_token = token_dict['access_token']
     refresh_token = token_dict['refresh_token']
 
-    authd_client = fitbit.Fitbit(CLIENT_ID, CLIENT_SECRET,
-                                 access_token=access_token, refresh_token=refresh_token, refresh_cb=update_token)
-
-    yearly_steps_data = authd_client.time_series('activities/steps',
-                                                 base_date=datetime.date(today.year, 1, 1), end_date=today - datetime.timedelta(days=1))
-
-    for i in yearly_steps_data['activities-steps']:
-        i['value'] = int(i['value'])
+    authd_client = fitbit.Fitbit(CLIENT_ID, CLIENT_SECRET, access_token=access_token,
+                                 refresh_token=refresh_token, refresh_cb=update_token)
 
     # create dictionary {key:date(datetime.datetime), value:step(string)}
     lifetime_steps_date_dict = {}
