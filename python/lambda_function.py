@@ -71,7 +71,7 @@ def create_weekly_report(steps_dict):
     return message
 
 
-def create_yearly_top_report(steps_dict):
+def create_yearly_top_records_report(steps_dict):
 
     year_steps_dict = {k: v for k, v in steps_dict.items() if k > datetime.datetime(today.year, 1, 1)}
     # The type of sorted_year_steps is list of tuple.
@@ -85,7 +85,7 @@ def create_yearly_top_report(steps_dict):
     return message
 
 
-def create_lifetime_top_report(steps_dict):
+def create_lifetime_top_records_report(steps_dict):
 
     # The type of sorted_lifetime_steps is list of tuple.
     sorted_lifetime_steps = sorted(steps_dict.items(), key=lambda x: x[1], reverse=True)
@@ -122,9 +122,9 @@ def lambda_handler(event, context):
     message += '======================\n'
     message += create_weekly_report(lifetime_steps_date_dict)
     message += '======================\n'
-    message += create_yearly_top_report(lifetime_steps_date_dict)
+    message += create_yearly_top_records_report(lifetime_steps_date_dict)
     message += '======================\n'
-    message += create_lifetime_top_report(lifetime_steps_date_dict)
+    message += create_lifetime_top_records_report(lifetime_steps_date_dict)
 
     data = {'message': message}
     response = requests.post(URL, headers=HEADERS, data=data)
