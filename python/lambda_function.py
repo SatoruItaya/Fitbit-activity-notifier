@@ -18,7 +18,7 @@ s3 = boto3.resource('s3')
 refresh_cb_bucket = s3.Bucket(REFRESH_CB_BUCKET_NAME)
 tmp_file_name = '/tmp/token.txt'
 
-today = datetime.date.today()
+today = datetime.datetime.today()
 
 
 def update_token(token):
@@ -36,24 +36,31 @@ def format_steps(steps):
 
 
 def create_weekly_report(steps_dict):
-    weekly_message = '\nWeekly Report\n'
-    weekly_steps = {}
+
+    two_week_steps_dict = {k: v for k, v in steps_dict.items() if k >= today - datetime.timedelta(days=15)}
+    sorted_weekly_steps = sorted(two_week_steps_dict.items(), key=lambda x: x[0])
+    weekly_steps = 0
     previous_weekly_steps = 0
 
+    weekly_message = '\nWeekly Report\n'
+
     for i in range(7):
-        date = (today - datetime.timedelta(days=7 - i)).strftime('%m/%d %a')
-        steps = steps_dict[(today - datetime.timedelta(days=7 - i)).strftime('%Y-%m-%d')]
-        previous_weekly_steps += steps_dict[(today - datetime.timedelta(days=14 - i)).strftime('%Y-%m-%d')]
+        date = sorted_weekly_steps[7 + i][0].strftime('%m/%d %a')
+        steps = sorted_weekly_steps[7 + i][1]
+        weekly_steps += steps
+        previous_weekly_steps += sorted_weekly_steps[i][1]
 
         weekly_message += date + ' ' + format_steps(steps) + ' steps\n'
-        weekly_steps[date] = steps
 
-    total = sum(weekly_steps.values())
-    avg = round(total / 7)
-    max_date_list = [kv[0] for kv in weekly_steps.items() if kv[1] == max(weekly_steps.values())]
-    min_date_list = [kv[0] for kv in weekly_steps.items() if kv[1] == min(weekly_steps.values())]
+    avg = round(weekly_steps / 7)
+    # TODO ここ直す とれてない
+    one_week_steps_dict = {k: v for k, v in two_week_steps_dict.items() if k >= today - datetime.timedelta(days=8)}
+    max_date_list = [kv[0].strftime('%m/%d') for kv in one_week_steps_dict.items() if kv[0] >= today - datetime.timedelta(days=8) and kv[1] == max(one_week_steps_dict.values())]
+    min_date_list = [kv[0].strftime('%m/%d') for kv in one_week_steps_dict.items() if kv[0] >= today - datetime.timedelta(days=8) and kv[1] == min(one_week_steps_dict.values())]
 
-    weekly_message += '\nTotal: ' + format_steps(total) + ' steps ' + '(' + '{:+,}'.format(total - previous_weekly_steps) + ')\n'
+    print(max_date_list)
+    print(min_date_list)
+    weekly_message += '\nTotal: ' + format_steps(weekly_steps) + ' steps ' + '(' + '{:+,}'.format(weekly_steps - previous_weekly_steps) + ')\n'
     weekly_message += 'Average: ' + format_steps(avg) + ' steps\n'
     weekly_message += 'Max: ' + ','.join(max_date_list) + '\n'
     weekly_message += 'Min: ' + ','.join(min_date_list) + '\n'
@@ -64,13 +71,12 @@ def create_weekly_report(steps_dict):
 def create_yearly_top_report(steps_dict):
 
     yearly_steps_dict = {k: v for k, v in steps_dict.items() if k > datetime.datetime(today.year, 1, 1)}
-    sorted_yearly_steps_dict = sorted(yearly_steps_dict.items(), key=lambda x: x[1], reverse=True)
-    print(sorted_yearly_steps_dict)
+    sorted_yearly_steps = sorted(yearly_steps_dict.items(), key=lambda x: x[1], reverse=True)
     yearly_message = '\nTop Records in This Year\n'
 
     for i in range(5):
-        yearly_message += format_steps(sorted_yearly_steps_dict[i][1]) + ' steps' \
-            + '(' + sorted_yearly_steps_dict[i][0].strftime('%m/%d') + ')\n'
+        yearly_message += format_steps(sorted_yearly_steps[i][1]) + ' steps' \
+            + '(' + sorted_yearly_steps[i][0].strftime('%m/%d') + ')\n'
 
     return yearly_message
 
@@ -101,7 +107,7 @@ def lambda_handler(event, context):
         lifetime_steps_date_dict[datetime.datetime.strptime(i['dateTime'], '%Y-%m-%d')] = int(i['value'])
 
     message = ''
-    message += create_weekly_report(lifetime_steps_str_dict)
+    message += create_weekly_report(lifetime_steps_date_dict)
     message += '======================'
     message += create_yearly_top_report(lifetime_steps_date_dict)
 
