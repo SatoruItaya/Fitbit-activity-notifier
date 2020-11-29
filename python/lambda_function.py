@@ -42,7 +42,7 @@ def create_weekly_report(steps_dict):
     week_steps = 0
     previous_week_steps = 0
 
-    weekly_message = '\nWeekly Report\n'
+    message = '\nWeekly Report\n'
 
     for i in range(7):
         date = sorted_week_steps[7 + i][0].strftime('%m/%d %a')
@@ -50,7 +50,7 @@ def create_weekly_report(steps_dict):
         week_steps += steps
         previous_week_steps += sorted_week_steps[i][1]
 
-        weekly_message += date + ' ' + format_steps(steps) + ' steps\n'
+        message += date + ' ' + format_steps(steps) + ' steps\n'
 
     avg = round(week_steps / 7)
 
@@ -60,27 +60,27 @@ def create_weekly_report(steps_dict):
     min_date_list = [kv[0].strftime('%m/%d') for kv in one_week_steps_dict.items()
                      if kv[0] >= today - datetime.timedelta(days=8) and kv[1] == min(one_week_steps_dict.values())]
 
-    weekly_message += '\n'
-    weekly_message += 'Total: ' + format_steps(week_steps) + ' steps ' + \
+    message += '\n'
+    message += 'Total: ' + format_steps(week_steps) + ' steps ' + \
         '(' + '{:+,}'.format(week_steps - previous_week_steps) + ')\n'
-    weekly_message += 'Average: ' + format_steps(avg) + ' steps\n'
-    weekly_message += 'Max: ' + ','.join(max_date_list) + '\n'
-    weekly_message += 'Min: ' + ','.join(min_date_list) + '\n'
+    message += 'Average: ' + format_steps(avg) + ' steps\n'
+    message += 'Max: ' + ','.join(max_date_list) + '\n'
+    message += 'Min: ' + ','.join(min_date_list) + '\n'
 
-    return weekly_message
+    return message
 
 
 def create_yearly_top_report(steps_dict):
 
     year_steps_dict = {k: v for k, v in steps_dict.items() if k > datetime.datetime(today.year, 1, 1)}
     sorted_year_steps = sorted(year_steps_dict.items(), key=lambda x: x[1], reverse=True)
-    yearly_message = '\nTop Records in This Year\n'
+    message = '\nTop Records in This Year\n'
 
     for i in range(5):
-        yearly_message += format_steps(sorted_year_steps[i][1]) + ' steps' \
+        message += format_steps(sorted_year_steps[i][1]) + ' steps' \
             + '(' + sorted_year_steps[i][0].strftime('%m/%d') + ')\n'
 
-    return yearly_message
+    return message
 
 
 def create_lifetime_top_report(steps_dict):
