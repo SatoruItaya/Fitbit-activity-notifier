@@ -114,6 +114,7 @@ def lambda_handler(event, context):
     lifetime_steps_date_dict = {}
     lifetime_steps_data = authd_client.time_series('activities/steps', period='max')
 
+    # lifetime_steps_data inclueds datas until today, so [:-1] is necessary to exclude today's data.
     for i in lifetime_steps_data['activities-steps'][:-1]:
         lifetime_steps_date_dict[datetime.datetime.strptime(i['dateTime'], '%Y-%m-%d')] = int(i['value'])
 
