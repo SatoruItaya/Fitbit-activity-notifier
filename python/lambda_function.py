@@ -42,7 +42,7 @@ def create_weekly_report(steps_dict):
     week_steps = 0
     previous_week_steps = 0
 
-    message = '\nWeekly Report\n'
+    message = 'Weekly Report\n\n'
 
     for i in range(7):
         date = sorted_week_steps[7 + i][0].strftime('%m/%d %a')
@@ -86,7 +86,7 @@ def create_yearly_top_report(steps_dict):
 def create_lifetime_top_report(steps_dict):
 
     sorted_lifetime_steps = sorted(steps_dict.items(), key=lambda x: x[1], reverse=True)
-    message = 'Top Records in Lifetime\n'
+    message = 'Top Records in Lifetime\n\n'
 
     for i in range(5):
         message += format_steps(sorted_lifetime_steps[i][1]) + ' steps' \
@@ -120,7 +120,7 @@ def lambda_handler(event, context):
     for i in lifetime_steps_data['activities-steps'][:-1]:
         lifetime_steps_date_dict[datetime.datetime.strptime(i['dateTime'], '%Y-%m-%d')] = int(i['value'])
 
-    message = ''
+    message = '\n======================\n'
     message += create_weekly_report(lifetime_steps_date_dict)
     message += '======================\n'
     message += create_yearly_top_report(lifetime_steps_date_dict)
