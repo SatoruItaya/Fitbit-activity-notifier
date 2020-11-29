@@ -38,6 +38,7 @@ def format_steps(steps):
 def create_weekly_report(steps_dict):
 
     two_weeks_steps_dict = {k: v for k, v in steps_dict.items() if k >= today - datetime.timedelta(days=15)}
+    # The type of sorted_week_steps is list of tuple.
     sorted_week_steps = sorted(two_weeks_steps_dict.items(), key=lambda x: x[0])
     week_steps = 0
     previous_week_steps = 0
@@ -73,6 +74,7 @@ def create_weekly_report(steps_dict):
 def create_yearly_top_report(steps_dict):
 
     year_steps_dict = {k: v for k, v in steps_dict.items() if k > datetime.datetime(today.year, 1, 1)}
+    # The type of sorted_year_steps is list of tuple.
     sorted_year_steps = sorted(year_steps_dict.items(), key=lambda x: x[1], reverse=True)
     message = 'Top Records in This Year\n\n'
 
@@ -85,6 +87,7 @@ def create_yearly_top_report(steps_dict):
 
 def create_lifetime_top_report(steps_dict):
 
+    # The type of sorted_lifetime_steps is list of tuple.
     sorted_lifetime_steps = sorted(steps_dict.items(), key=lambda x: x[1], reverse=True)
     message = 'Top Records in Lifetime\n\n'
 
@@ -113,14 +116,15 @@ def lambda_handler(event, context):
     for i in yearly_steps_data['activities-steps']:
         i['value'] = int(i['value'])
 
-    # create map {key:date(datetime.datetime), value:step(string)}
+    # create dictionary {key:date(datetime.datetime), value:step(string)}
     lifetime_steps_date_dict = {}
     lifetime_steps_data = authd_client.time_series('activities/steps', period='max')
 
     for i in lifetime_steps_data['activities-steps'][:-1]:
         lifetime_steps_date_dict[datetime.datetime.strptime(i['dateTime'], '%Y-%m-%d')] = int(i['value'])
 
-    message = '\n======================\n'
+    message = '\n'
+    message += '======================\n'
     message += create_weekly_report(lifetime_steps_date_dict)
     message += '======================\n'
     message += create_yearly_top_report(lifetime_steps_date_dict)
