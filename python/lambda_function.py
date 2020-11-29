@@ -85,6 +85,15 @@ def create_yearly_top_report(steps_dict):
 
 def create_lifetime_top_report(steps_dict):
 
+    sorted_lifetime_steps = sorted(steps_dict.items(), key=lambda x: x[1], reverse=True)
+    message = '\nTop Records in Lifetime\n'
+
+    for i in range(5):
+        message += format_steps(sorted_lifetime_steps[i][1]) + ' steps' \
+            + '(' + sorted_lifetime_steps[i][0].strftime('%y%m/%d') + ')\n'
+
+    return message
+
 
 def lambda_handler(event, context):
 
@@ -115,6 +124,8 @@ def lambda_handler(event, context):
     message += create_weekly_report(lifetime_steps_date_dict)
     message += '======================'
     message += create_yearly_top_report(lifetime_steps_date_dict)
+    message += '======================'
+    message += create_lifetime_top_report(lifetime_steps_date_dict)
 
     data = {'message': message}
     response = requests.post(URL, headers=HEADERS, data=data)
