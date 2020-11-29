@@ -90,7 +90,7 @@ def create_lifetime_top_report(steps_dict):
 
     for i in range(5):
         message += format_steps(sorted_lifetime_steps[i][1]) + ' steps' \
-            + '(' + sorted_lifetime_steps[i][0].strftime('%y%m/%d') + ')\n'
+            + '(' + sorted_lifetime_steps[i][0].strftime('%Y/%m/%d') + ')\n'
 
     return message
 
