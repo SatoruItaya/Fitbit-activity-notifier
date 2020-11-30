@@ -73,7 +73,8 @@ def create_weekly_report(steps_dict):
 
 def create_yearly_top_records_report(steps_dict):
 
-    year_steps_dict = {k: v for k, v in steps_dict.items() if k > datetime.datetime(today.year, 1, 1)}
+    year_steps_dict = {k: v for k, v in steps_dict.items() if k >= datetime.datetime(today.year, 1, 1)}
+    print(year_steps_dict)
     # The type of sorted_year_steps is list of tuple.
     sorted_year_steps = sorted(year_steps_dict.items(), key=lambda x: x[1], reverse=True)
     message = 'Top Records in This Year\n\n'
