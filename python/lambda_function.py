@@ -5,12 +5,12 @@ import boto3
 from ast import literal_eval
 import datetime
 
-LINE_NOTIFY_TOKEN = os.environ["LINE_NOTIFY_TOKEN"]
-HEADERS = {"Authorization": "Bearer %s" % LINE_NOTIFY_TOKEN}
+LINE_NOTIFY_TOKEN_PARAMETER_NAME = os.environ["LINE_NOTIFY_TOKEN_PARAMETER_NAME"]
 URL = "https://notify-api.line.me/api/notify"
 
-CLIENT_ID = os.environ["CLIENT_ID"]
-CLIENT_SECRET = os.environ["CLIENT_SECRET"]
+# 環境変数に入れるかどうか 入れるか
+CLIENT_ID_PARAMETER_NAME = os.environ["CLIENT_ID_PARAMETER_NAME"]
+CLIENT_SECRET_PARAMETER_NAME = os.environ["CLIENT_SECRET_PARAMETER_NAME"]
 REFRESH_CB_BUCKET_NAME = os.environ["REFRESH_CB_BUCKET_NAME"]
 REFRESH_CB_FILE_NAME = os.environ["REFRESH_CB_FILE_NAME"]
 
@@ -19,6 +19,16 @@ refresh_cb_bucket = s3.Bucket(REFRESH_CB_BUCKET_NAME)
 tmp_file_name = '/tmp/token.txt'
 
 today = datetime.datetime.today()
+
+
+def get_parameter(name):
+    ssm_client = boto3.client('ssm')
+    response = ssm_client.get_parameter(
+        Name=name,
+        WithDecryption=True
+    )
+
+    return response['Parameter']['Value']
 
 
 def update_token(token):
@@ -74,7 +84,6 @@ def create_weekly_report(steps_dict):
 def create_yearly_top_records_report(steps_dict):
 
     year_steps_dict = {k: v for k, v in steps_dict.items() if k >= datetime.datetime(today.year, 1, 1)}
-    print(year_steps_dict)
     # The type of sorted_year_steps is list of tuple.
     sorted_year_steps = sorted(year_steps_dict.items(), key=lambda x: x[1], reverse=True)
     message = 'Top Records in This Year\n\n'
@@ -108,7 +117,7 @@ def lambda_handler(event, context):
     access_token = token_dict['access_token']
     refresh_token = token_dict['refresh_token']
 
-    authd_client = fitbit.Fitbit(CLIENT_ID, CLIENT_SECRET, access_token=access_token,
+    authd_client = fitbit.Fitbit(get_parameter(CLIENT_ID_PARAMETER_NAME), get_parameter(CLIENT_SECRET_PARAMETER_NAME), access_token=access_token,
                                  refresh_token=refresh_token, refresh_cb=update_token)
 
     # create dictionary {key:date(datetime.datetime), value:step(string)}
@@ -127,6 +136,7 @@ def lambda_handler(event, context):
     message += '======================\n'
     message += create_lifetime_top_records_report(lifetime_steps_date_dict)
 
+    headers = {"Authorization": "Bearer %s" % get_parameter(LINE_NOTIFY_TOKEN_PARAMETER_NAME)}
     data = {'message': message}
-    response = requests.post(URL, headers=HEADERS, data=data)
+    response = requests.post(URL, headers=headers, data=data)
     print(response.text)
