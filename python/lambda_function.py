@@ -8,7 +8,6 @@ import datetime
 LINE_NOTIFY_TOKEN_PARAMETER_NAME = os.environ["LINE_NOTIFY_TOKEN_PARAMETER_NAME"]
 URL = "https://notify-api.line.me/api/notify"
 
-# 環境変数に入れるかどうか 入れるか
 CLIENT_ID_PARAMETER_NAME = os.environ["CLIENT_ID_PARAMETER_NAME"]
 CLIENT_SECRET_PARAMETER_NAME = os.environ["CLIENT_SECRET_PARAMETER_NAME"]
 REFRESH_CB_BUCKET_NAME = os.environ["REFRESH_CB_BUCKET_NAME"]
