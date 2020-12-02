@@ -21,6 +21,11 @@ resource "aws_lambda_function" "lambda" {
   }
 }
 
+resource "aws_cloudwatch_log_group" "lambda_log_group" {
+  name              = "/aws/lambda/${var.lambda_function_name}"
+  retention_in_days = 3
+}
+
 resource "aws_iam_role" "lambda_iam_role" {
   name = var.lambda_function_name
 
@@ -39,11 +44,6 @@ resource "aws_iam_role" "lambda_iam_role" {
   ]
 }
 EOF
-}
-
-resource "aws_cloudwatch_log_group" "lambda_log_group" {
-  name              = "/aws/lambda/${var.lambda_function_name}"
-  retention_in_days = 3
 }
 
 resource "aws_iam_policy" "lambda_logs" {
