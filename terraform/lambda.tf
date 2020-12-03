@@ -15,8 +15,8 @@ resource "aws_lambda_function" "lambda" {
       CLIENT_ID_PARAMETER_NAME         = var.client_id_parameter_name
       CLIENT_SECRET_PARAMETER_NAME     = var.client_secret_parameter_name
       LINE_NOTIFY_TOKEN_PARAMETER_NAME = var.line_notify_token_parameter_name
-      REFRESH_CB_BUCKET_NAME           = var.fitbit_refresh_cb_files # delete later
-      REFRESH_CB_FILE_NAME             = "token.txt"                 # delete later
+      REFRESH_CB_BUCKET_NAME           = var.fitbit_refresh_cb_bucket_name # delete later
+      REFRESH_CB_FILE_NAME             = "token.txt"                       # delete later
     }
   }
 }

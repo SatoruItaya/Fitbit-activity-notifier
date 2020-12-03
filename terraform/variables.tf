@@ -1,8 +1,3 @@
-#delete later
-variable "fitbit_refresh_cb_files" {
-  type = string
-}
-
 variable "aws_account" {
   type = string
 }
@@ -17,12 +12,21 @@ variable "lambda_function_name" {
   default = "fitbit-activity-notifier"
 }
 
+variable "fitbit_refresh_cb_bucket_name" {
+  type = string
+}
+
 variable "deployment_package_bucket" {
   type = string
 }
 
 variable "deployment_package_key" {
   type = string
+}
+
+variable "cloudwatch_event_rule" {
+  type    = string
+  default = "weekly-report"
 }
 
 variable "client_id_parameter_name" {
