@@ -1,6 +1,6 @@
 resource "aws_cloudwatch_event_rule" "event_rule" {
-  name                = var.cloudwatch_event_rule
-  schedule_expression = "cron(0 3 ? * SUN *)"
+  name                = var.cloudwatch_event_rule_name
+  schedule_expression = var.cloudwatch_event_schedule_expression
 }
 
 resource "aws_lambda_permission" "allow_cloudwatch" {

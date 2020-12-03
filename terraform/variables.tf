@@ -29,9 +29,14 @@ variable "deployment_package_key" {
   type = string
 }
 
-variable "cloudwatch_event_rule" {
+variable "cloudwatch_event_rule_name" {
   type    = string
   default = "weekly-report"
+}
+
+variable "cloudwatch_event_schedule_expression" {
+  type    = string
+  default = "cron(0 3 ? * SUN *)"
 }
 
 variable "client_id_parameter_name" {
