@@ -16,6 +16,11 @@ variable "fitbit_refresh_cb_bucket_name" {
   type = string
 }
 
+variable "fitbit_refresh_cb_file_name" {
+  type    = string
+  default = "token.txt"
+}
+
 variable "deployment_package_bucket" {
   type = string
 }
