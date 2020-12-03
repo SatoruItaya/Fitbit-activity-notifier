@@ -88,5 +88,5 @@ EOF
 
 resource "aws_iam_role_policy_attachment" "lambda_iam_role_policy_attachment" {
   role       = aws_iam_role.lambda_iam_role.name
-  policy_arn = aws_iam_policy.lambda_logs.arn
+  policy_arn = aws_iam_policy.lambda_iam_policy.arn
 }
