@@ -46,7 +46,7 @@ resource "aws_iam_role" "lambda_iam_role" {
 EOF
 }
 
-resource "aws_iam_policy" "lambda_logs" {
+resource "aws_iam_policy" "lambda_iam_policy" {
   name        = var.lambda_function_name
   path        = "/"
   description = "IAM policy for logging from ${var.lambda_function_name}"
@@ -86,7 +86,7 @@ resource "aws_iam_policy" "lambda_logs" {
 EOF
 }
 
-resource "aws_iam_role_policy_attachment" "lambda_logs" {
+resource "aws_iam_role_policy_attachment" "lambda_iam_role_policy_attachment" {
   role       = aws_iam_role.lambda_iam_role.name
   policy_arn = aws_iam_policy.lambda_logs.arn
 }
