@@ -51,7 +51,6 @@ resource "aws_iam_policy" "lambda_iam_policy" {
   path        = "/"
   description = "IAM policy for logging from ${var.lambda_function_name}"
 
-  // delete-s3-later
   policy = <<EOF
 {
   "Version": "2012-10-17",
@@ -76,9 +75,10 @@ resource "aws_iam_policy" "lambda_iam_policy" {
     },
     {
       "Action": [
-        "s3:*"
+        "s3:Put*",
+        "s3:Get*"
       ],
-      "Resource": "*",
+      "Resource": "${aws_s3_bucket.fitbit_refresh_cb_bucket.arn}/*",
       "Effect": "Allow"
     }
   ]
@@ -90,3 +90,10 @@ resource "aws_iam_role_policy_attachment" "lambda_iam_role_policy_attachment" {
   role       = aws_iam_role.lambda_iam_role.name
   policy_arn = aws_iam_policy.lambda_iam_policy.arn
 }
+
+resource "aws_s3_bucket" "fitbit_refresh_cb_bucket" {
+  bucket        = var.fitbit_refresh_cb_bucket_name
+  acl           = "private"
+  force_destroy = false
+}
+
