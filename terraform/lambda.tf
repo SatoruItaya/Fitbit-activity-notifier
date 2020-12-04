@@ -78,7 +78,7 @@ resource "aws_iam_policy" "lambda_iam_policy" {
         "s3:Put*",
         "s3:Get*"
       ],
-      "Resource": "${aws_s3_bucket.fitbit_refresh_cb_bucket.arn}/*",
+      "Resource": "${aws_s3_bucket.fitbit_refresh_cb_bucket.arn}/${var.fitbit_refresh_cb_file_name}",
       "Effect": "Allow"
     }
   ]
