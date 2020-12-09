@@ -13,6 +13,9 @@ CLIENT_SECRET_PARAMETER_NAME = os.environ["CLIENT_SECRET_PARAMETER_NAME"]
 REFRESH_CB_BUCKET_NAME = os.environ["REFRESH_CB_BUCKET_NAME"]
 REFRESH_CB_FILE_NAME = os.environ["REFRESH_CB_FILE_NAME"]
 
+# Fitbit API specification
+LIMIT_DAYS = 1095
+
 s3 = boto3.resource('s3')
 refresh_cb_bucket = s3.Bucket(REFRESH_CB_BUCKET_NAME)
 tmp_file_name = '/tmp/token.txt'
@@ -121,11 +124,30 @@ def lambda_handler(event, context):
 
     # create dictionary {key:date(datetime.datetime), value:step(string)}
     lifetime_steps_date_dict = {}
-    lifetime_steps_data = authd_client.time_series('activities/steps', period='max')
 
-    # lifetime_steps_data inclueds datas until today, so [:-1] is necessary to exclude today's data.
-    for i in lifetime_steps_data['activities-steps'][:-1]:
-        lifetime_steps_date_dict[datetime.datetime.strptime(i['dateTime'], '%Y-%m-%d')] = int(i['value'])
+    # Number of target days
+    days = (today - datetime.datetime.strptime(event['start_date'], '%Y-%m-%d')).days
+
+    count = 0
+
+    while days > 0:
+
+        tmp_end_date = today - datetime.timedelta(days=1 + LIMIT_DAYS * count)
+
+        if days > LIMIT_DAYS:
+            tmp_start_date = tmp_end_date - datetime.timedelta(days=LIMIT_DAYS - 1)
+        else:
+            tmp_start_date = datetime.datetime.strptime(event['start_date'], '%Y-%m-%d')
+
+        tmp_steps_data = authd_client.time_series('activities/steps',
+                                                  base_date=datetime.datetime.strftime(tmp_start_date, '%Y-%m-%d'),
+                                                  end_date=datetime.datetime.strftime(tmp_end_date, '%Y-%m-%d'))
+
+        for i in tmp_steps_data['activities-steps']:
+            lifetime_steps_date_dict[datetime.datetime.strptime(i['dateTime'], '%Y-%m-%d')] = int(i['value'])
+
+        days -= LIMIT_DAYS
+        count += 1
 
     message = '\n'
     message += '======================\n'
