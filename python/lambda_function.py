@@ -125,19 +125,22 @@ def lambda_handler(event, context):
     # create dictionary {key:date(datetime.datetime), value:step(string)}
     lifetime_steps_date_dict = {}
 
+    # define start_date as datetime.datetime from cloudwatch event input
+    start_date = datetime.datetime.strptime(event['start_date'], '%Y-%m-%d')
+
     # Number of target days
-    days = (today - datetime.datetime.strptime(event['start_date'], '%Y-%m-%d')).days
+    rest_target_days = (today - start_date).days
 
     count = 0
 
-    while days > 0:
+    while rest_target_days > 0:
 
         tmp_end_date = today - datetime.timedelta(days=1 + LIMIT_DAYS * count)
 
-        if days > LIMIT_DAYS:
+        if rest_target_days > LIMIT_DAYS:
             tmp_start_date = tmp_end_date - datetime.timedelta(days=LIMIT_DAYS - 1)
         else:
-            tmp_start_date = datetime.datetime.strptime(event['start_date'], '%Y-%m-%d')
+            tmp_start_date = start_date
 
         tmp_steps_data = authd_client.time_series('activities/steps',
                                                   base_date=datetime.datetime.strftime(tmp_start_date, '%Y-%m-%d'),
@@ -146,7 +149,7 @@ def lambda_handler(event, context):
         for i in tmp_steps_data['activities-steps']:
             lifetime_steps_date_dict[datetime.datetime.strptime(i['dateTime'], '%Y-%m-%d')] = int(i['value'])
 
-        days -= LIMIT_DAYS
+        rest_target_days -= LIMIT_DAYS
         count += 1
 
     message = '\n'
