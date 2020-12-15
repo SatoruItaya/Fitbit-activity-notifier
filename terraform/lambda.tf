@@ -26,6 +26,11 @@ resource "aws_cloudwatch_log_group" "lambda_log_group" {
   retention_in_days = 3
 }
 
+resource "aws_cloudwatch_log_stream" "lambda_log_stream" {
+  name           = var.lambda_function_name
+  log_group_name = aws_cloudwatch_log_group.lambda_log_group.name
+}
+
 resource "aws_iam_role" "lambda_iam_role" {
   name = var.lambda_function_name
 
