@@ -8,8 +8,8 @@ Terraform files to create AWS resources. They create some resuraces for the Lamb
 |aws_region|string|ap-northeast-1|no|AWS Region to create some resoureces at|
 |lambda_function_name|string|fitbit-activity-notifier|no|Lambda funtion name|
 |fitbit_refresh_cb_bucket_name|string|n/a|yes|S3 bucket name to place a token file|
-|fitbit_refresh_cb_file_name|string|token.txt|no|name of token file|
-|fitbit_start_date_of_use|string|n/a|yes|start date of using Fitbit(yyyy-MM-dd)|
+|fitbit_refresh_cb_file_name|string|token.txt|no|Name of token file|
+|fitbit_start_date_of_use|string|n/a|yes|Start date of using Fitbit(yyyy-MM-dd)|
 |deployment_package_bucket|string|n/a|yes|S3 bucket name for Lambda deploy resources|
 |deployment_package_key|string|n/a|yes|Key of deploy resources in `deployment_package_bucket`|
 |cloudwatch_event_rule_name|string|weekly-report|no|Cloudwatch Event Rule name|
@@ -19,13 +19,13 @@ Terraform files to create AWS resources. They create some resuraces for the Lamb
 |line_notify_token_parameter_name|string|line-notify-token|no|Parameter name of Systems Manager Parameter Store for LINE Notify token|
 
 ## How to use
-If you use to S3 as backend for tfstate, you need to set backend config.For Example, execute `terraform init` as 
+If you use S3 as a backend for tfstate, you need to set backend config.For Example, execute `terraform init` as 
 ```
 $ terraform init -backend-config=terraform.backend
 ```
 with following terraform.backend,
 
-```terraform.backend
+```:terraform.backend
 bucket  = "your-tfstate-bucket"
 key     = "Fitbit-activity-notifier/terraform.tfstate"
 region  = "ap-northeast-1"
