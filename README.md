@@ -1,10 +1,10 @@
 # Fitbit-activity-notifier
 
 The Fitbit-activity-notifier notifies you of a custom [Fitbit](https://www.fitbit.com/global/us/home) weekly report via [LINE](https://line.me/en/).
-The custom report contains following items.
+The custom report contains following items,
 - Weekly report of steps
 - Top records of steps in this year
-- Top records of steps in lifetime
+- Top records of steps in lifetime.
 
 # Necessary things
 - Fitbit
@@ -19,26 +19,28 @@ The custom report contains following items.
 # Overview of Architecture
 - A trigger is [CloudWatch Events](https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/WhatIsCloudWatchEvents.html) and invoke [Lambda](https://aws.amazon.com/lambda/?nc1=h_ls) funtion.
 - Lambda funtion hits Fitbit API, extracts data, and create a custom report. After that, it sends a request to LINE Notify.
-- We get a custom report via LINE.
+- You can get a custom report via LINE.
 
 # Requirements
 - Python 3.7+
 - Terraform 0.14+
 
 # Advance preparation
-- You need to store following parameters in [AWS Systems Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html),
+- You need to store following parameters in [Systems Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html),
     - Client ID for Fitbit
     - Client Secret for Fitbit
-    - LINE Notify token
+    - LINE Notify token.
 - These parameters are variables of Terraform, and set as Enviromment variables for Lambda.
 
 # Structure
+```
 .
 ├── python
 │   Python script for AWS Lamdba and Makefile to deploy
 │
 └── terraform
     Terraform files to create AWS resources
+```
 
 More details are shown in each README.
 

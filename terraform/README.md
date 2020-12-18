@@ -1,5 +1,5 @@
-# Fitbit-activity-notifier/terraform/
-- Terraform files to create AWS resources. They create some resuraces for the Lambda funtion and Cloudwatch Event to trigger the Lambda funtion.
+# Fitbit-activity-notifier/terraform
+Terraform files to create AWS resources. They create some resuraces for the Lambda funtion and Cloudwatch Event to trigger the Lambda funtion.
 
 ## Variables
 |name|type|default|required|description|
@@ -19,7 +19,7 @@
 |line_notify_token_parameter_name|string|line-notify-token|no|Parameter name of Systems Manager Parameter Store for LINE Notify token|
 
 ## How to use
-- If you use to S3 as backend for tfstate, you need to set backend config.For Example, execute `terraform init` as 
+If you use to S3 as backend for tfstate, you need to set backend config.For Example, execute `terraform init` as 
 ```
 $ terraform init -backend-config=terraform.backend
 ```
