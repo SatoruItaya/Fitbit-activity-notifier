@@ -44,7 +44,7 @@ The custom report contains following items,
 
 More details are shown in each README.
 
-# Example of custom rpeort
+# Example of a custom report
 
 ```
 ======================
