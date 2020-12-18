@@ -1,7 +1,6 @@
 ARTIFACTS_DIR := artifacts
 ZIP_FILE_NAME := lambda
 LAMBDA_FUNCTION_NAME := fitbit-activity-notifier
-ARTIFACTS_BUCKET := set-your-bucket
 ARTIFACTS_KEY := fitbit-activity-notifier
 
 deploy:
