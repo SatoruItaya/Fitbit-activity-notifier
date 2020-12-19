@@ -50,6 +50,10 @@ def format_steps(steps):
 def create_weekly_report(steps_dict):
 
     two_weeks_steps_dict = {k: v for k, v in steps_dict.items() if k >= today - datetime.timedelta(days=15)}
+
+    if len(two_weeks_steps_dict) < 14:
+        return "There is not enough data."
+
     # The type of sorted_week_steps is list of tuple.
     sorted_week_steps = sorted(two_weeks_steps_dict.items(), key=lambda x: x[0])
     week_steps = 0
@@ -86,6 +90,10 @@ def create_weekly_report(steps_dict):
 def create_yearly_top_records_report(steps_dict):
 
     year_steps_dict = {k: v for k, v in steps_dict.items() if k >= datetime.datetime(today.year, 1, 1)}
+
+    if len(year_steps_dict) < 5:
+        return "There is not enough data."
+
     # The type of sorted_year_steps is list of tuple.
     sorted_year_steps = sorted(year_steps_dict.items(), key=lambda x: x[1], reverse=True)
     message = 'Top Records in This Year\n\n'
@@ -98,6 +106,9 @@ def create_yearly_top_records_report(steps_dict):
 
 
 def create_lifetime_top_records_report(steps_dict):
+
+    if len(steps_dict) < 5:
+        return "There is not enough data."
 
     # The type of sorted_lifetime_steps is list of tuple.
     sorted_lifetime_steps = sorted(steps_dict.items(), key=lambda x: x[1], reverse=True)
