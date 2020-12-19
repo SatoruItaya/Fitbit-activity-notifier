@@ -1,12 +1,3 @@
-variable "aws_account" {
-  type = string
-}
-
-variable "aws_region" {
-  type    = string
-  default = "ap-northeast-1"
-}
-
 variable "lambda_function_name" {
   type    = string
   default = "fitbit-activity-notifier"
@@ -57,3 +48,7 @@ variable "line_notify_token_parameter_name" {
   type    = string
   default = "line-notify-token"
 }
+
+data "aws_caller_identity" "current" {}
+
+data "aws_region" "current" {}

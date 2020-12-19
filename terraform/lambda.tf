@@ -72,9 +72,9 @@ resource "aws_iam_policy" "lambda_iam_policy" {
     {
       "Action": "ssm:GetParameter",
       "Resource": [
-        "arn:aws:ssm:${var.aws_region}:${var.aws_account}:parameter/${var.client_id_parameter_name}",
-        "arn:aws:ssm:${var.aws_region}:${var.aws_account}:parameter/${var.client_secret_parameter_name}",
-        "arn:aws:ssm:${var.aws_region}:${var.aws_account}:parameter/${var.line_notify_token_parameter_name}"
+        "arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter/${var.client_id_parameter_name}",
+        "arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter/${var.client_secret_parameter_name}",
+        "arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter/${var.line_notify_token_parameter_name}"
       ],
       "Effect": "Allow"
     },

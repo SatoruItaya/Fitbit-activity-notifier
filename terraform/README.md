@@ -4,8 +4,6 @@ Terraform files to create AWS resources. They create some resuraces for the Lamb
 ## Variables
 |name|type|default|required|description|
 |:-:|:-:|:-:|:-:|:-:|
-|aws_account|string|n/a|yes|AWS acoount ID|
-|aws_region|string|ap-northeast-1|no|AWS Region to create some resoureces at|
 |lambda_function_name|string|fitbit-activity-notifier|no|Lambda funtion name|
 |fitbit_refresh_cb_bucket_name|string|n/a|yes|S3 bucket name to place a token file|
 |fitbit_refresh_cb_file_name|string|token.txt|no|Name of token file|
