@@ -47,6 +47,41 @@ def format_steps(steps):
     return '{:,}'.format(steps)
 
 
+def get_lifetime_steps_data(str_start_date, authd_client):
+
+    # create dictionary {key:date(datetime.datetime), value:step(string)}
+    lifetime_steps_data_dict = {}
+
+    # define start_date as datetime.datetime from cloudwatch event input
+    start_date = datetime.datetime.strptime(str_start_date, '%Y-%m-%d')
+
+    # Number of target days
+    rest_target_days = (today - start_date).days
+
+    count = 0
+
+    while rest_target_days > 0:
+
+        tmp_end_date = today - datetime.timedelta(days=1 + LIMIT_DAYS * count)
+
+        if rest_target_days > LIMIT_DAYS:
+            tmp_start_date = tmp_end_date - datetime.timedelta(days=LIMIT_DAYS - 1)
+        else:
+            tmp_start_date = start_date
+
+        tmp_steps_data = authd_client.time_series('activities/steps',
+                                                  base_date=datetime.datetime.strftime(tmp_start_date, '%Y-%m-%d'),
+                                                  end_date=datetime.datetime.strftime(tmp_end_date, '%Y-%m-%d'))
+
+        for i in tmp_steps_data['activities-steps']:
+            lifetime_steps_data_dict[datetime.datetime.strptime(i['dateTime'], '%Y-%m-%d')] = int(i['value'])
+
+        rest_target_days -= LIMIT_DAYS
+        count += 1
+
+    return lifetime_steps_data_dict
+
+
 def create_weekly_report(steps_dict):
 
     two_weeks_steps_dict = {k: v for k, v in steps_dict.items() if k >= today - datetime.timedelta(days=15)}
@@ -133,43 +168,16 @@ def lambda_handler(event, context):
     authd_client = fitbit.Fitbit(get_parameter(CLIENT_ID_PARAMETER_NAME), get_parameter(CLIENT_SECRET_PARAMETER_NAME), access_token=access_token,
                                  refresh_token=refresh_token, refresh_cb=update_token)
 
-    # create dictionary {key:date(datetime.datetime), value:step(string)}
-    lifetime_steps_date_dict = {}
-
-    # define start_date as datetime.datetime from cloudwatch event input
-    start_date = datetime.datetime.strptime(event['start_date'], '%Y-%m-%d')
-
-    # Number of target days
-    rest_target_days = (today - start_date).days
-
-    count = 0
-
-    while rest_target_days > 0:
-
-        tmp_end_date = today - datetime.timedelta(days=1 + LIMIT_DAYS * count)
-
-        if rest_target_days > LIMIT_DAYS:
-            tmp_start_date = tmp_end_date - datetime.timedelta(days=LIMIT_DAYS - 1)
-        else:
-            tmp_start_date = start_date
-
-        tmp_steps_data = authd_client.time_series('activities/steps',
-                                                  base_date=datetime.datetime.strftime(tmp_start_date, '%Y-%m-%d'),
-                                                  end_date=datetime.datetime.strftime(tmp_end_date, '%Y-%m-%d'))
-
-        for i in tmp_steps_data['activities-steps']:
-            lifetime_steps_date_dict[datetime.datetime.strptime(i['dateTime'], '%Y-%m-%d')] = int(i['value'])
-
-        rest_target_days -= LIMIT_DAYS
-        count += 1
+    # {key:date(datetime.datetime), value:step(string)}
+    lifetime_steps_data_dict = get_lifetime_steps_data(event['start_date'], authd_client)
 
     message = '\n'
     message += '======================\n'
-    message += create_weekly_report(lifetime_steps_date_dict)
+    message += create_weekly_report(lifetime_steps_data_dict)
     message += '======================\n'
-    message += create_yearly_top_records_report(lifetime_steps_date_dict)
+    message += create_yearly_top_records_report(lifetime_steps_data_dict)
     message += '======================\n'
-    message += create_lifetime_top_records_report(lifetime_steps_date_dict)
+    message += create_lifetime_top_records_report(lifetime_steps_data_dict)
 
     headers = {"Authorization": "Bearer %s" % get_parameter(LINE_NOTIFY_TOKEN_PARAMETER_NAME)}
     data = {'message': message}
