@@ -43,10 +43,6 @@ def update_token(token):
     return
 
 
-def format_steps(steps):
-    return '{:,}'.format(steps)
-
-
 def get_lifetime_steps_data(str_start_date, authd_client):
 
     # create dictionary {key:date(datetime.datetime), value:step(string)}
@@ -80,6 +76,10 @@ def get_lifetime_steps_data(str_start_date, authd_client):
         count += 1
 
     return lifetime_steps_data_dict
+
+
+def format_steps(steps):
+    return '{:,}'.format(steps)
 
 
 def create_weekly_report(steps_dict):
