@@ -1,2 +1,2 @@
-requests==2.23.0
+requests==2.26.0
 fitbit==0.3.1

@@ -17,11 +17,11 @@ Terraform files to create AWS resources. They create some resuraces for the Lamb
 |line_notify_token_parameter_name|string|line-notify-token|no|Parameter name of Systems Manager Parameter Store for LINE Notify token|
 
 ## How to use
-If you use S3 as a backend for tfstate, you need to set backend config.For Example, execute `terraform init` as 
+If you use S3 as a backend for tfstate, you need to set backend config. For Example, execute `terraform init` as 
 ```
 $ terraform init -backend-config=terraform.backend
 ```
-with following terraform.backend,
+with following `terraform.backend`,
 
 ```:terraform.backend
 bucket  = "your-tfstate-bucket"
