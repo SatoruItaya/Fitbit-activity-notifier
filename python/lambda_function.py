@@ -86,15 +86,16 @@ def create_weekly_report(steps_dict):
 
     two_weeks_steps_dict = {k: v for k, v in steps_dict.items() if k >= today - datetime.timedelta(days=15)}
 
+    message = 'Weekly Report\n\n'
+
     if len(two_weeks_steps_dict) < 14:
-        return "There is not enough data.\n"
+        message += "There is not enough data.\n"
+        return message
 
     # The type of sorted_week_steps is list of tuple.
     sorted_week_steps = sorted(two_weeks_steps_dict.items(), key=lambda x: x[0])
     week_steps = 0
     previous_week_steps = 0
-
-    message = 'Weekly Report\n\n'
 
     for i in range(7):
         date = sorted_week_steps[7 + i][0].strftime('%m/%d %a')
@@ -126,12 +127,14 @@ def create_yearly_top_records_report(steps_dict):
 
     year_steps_dict = {k: v for k, v in steps_dict.items() if k >= datetime.datetime(today.year, 1, 1)}
 
+    message = 'Top Records in This Year\n\n'
+
     if len(year_steps_dict) < 5:
-        return "There is not enough data.\n"
+        message += "There is not enough data.\n"
+        return message
 
     # The type of sorted_year_steps is list of tuple.
     sorted_year_steps = sorted(year_steps_dict.items(), key=lambda x: x[1], reverse=True)
-    message = 'Top Records in This Year\n\n'
 
     for i in range(5):
         message += format_steps(sorted_year_steps[i][1]) + \
@@ -142,12 +145,14 @@ def create_yearly_top_records_report(steps_dict):
 
 def create_lifetime_top_records_report(steps_dict):
 
+    message = 'Top Records in Lifetime\n\n'
+
     if len(steps_dict) < 5:
-        return "There is not enough data.\n"
+        message += "There is not enough data.\n"
+        return message
 
     # The type of sorted_lifetime_steps is list of tuple.
     sorted_lifetime_steps = sorted(steps_dict.items(), key=lambda x: x[1], reverse=True)
-    message = 'Top Records in Lifetime\n\n'
 
     for i in range(5):
         message += format_steps(sorted_lifetime_steps[i][1]) + \
