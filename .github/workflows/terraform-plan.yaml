@@ -39,7 +39,7 @@ jobs:
       - name: Terraform Plan
         id: plan
         run: terraform plan -no-color
-      - uses: actions/github-script@v6.2.0
+      - uses: actions/github-script@v6.3.1
         if: github.event_name == 'pull_request'
         env:
           PLAN: "terraform\n${{ steps.plan.outputs.stdout }}"
