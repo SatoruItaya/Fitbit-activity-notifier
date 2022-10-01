@@ -23,7 +23,7 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
       - uses: aws-actions/configure-aws-credentials@v1
         with:
-          role-to-assume: arn:aws:iam::${{ secrets.TERRAFORM_AWS_ACCOUNT_ID }}:role/github-actions-role
+          role-to-assume: arn:aws:iam::286984104046:role/github-actions-role
           aws-region: ap-northeast-1
       - name: Terraform Init
         id: init
