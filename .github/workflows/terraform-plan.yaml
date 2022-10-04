@@ -16,7 +16,7 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v3.0.2
+      - uses: actions/checkout@v3.1.0
       - name: Detect Terraform Version
         run: |
           printf "TF_VERSION=%s" $(cat .terraform-version) >> $GITHUB_ENV
