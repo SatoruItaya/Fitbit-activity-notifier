@@ -25,20 +25,30 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
       - uses: aws-actions/configure-aws-credentials@v1
         with:
-          role-to-assume: arn:aws:iam::286984104046:role/github-actions-role
+          role-to-assume: arn:aws:iam::286984104046:role/${{ secrets.GITHUB_ACTION_ROLE_NAME }}
           aws-region: ap-northeast-1
       - name: Terraform fmt
         id: fmt
         run: terraform fmt -check
       - name: Terraform Init
         id: init
-        run: terraform init -backend-config='bucket=${{ secrets.TFSTATE_BUCKET }}' -backend-config='key=Fitbit-Activity-Notifier/terraform.tfstate' -backend-config='region=ap-northeast-1'
+        run: |
+          terraform init \
+          -backend-config='bucket=${{ secrets.TFSTATE_BUCKET }}' \
+          -backend-config='key=Fitbit-Activity-Notifier/terraform.tfstate' \
+          -backend-config='region=ap-northeast-1'
       - name: Terraform Validate
         id: validate
         run: terraform validate -no-color
       - name: Terraform Plan
         id: plan
-        run: terraform plan -no-color
+        run: |
+          terraform plan -no-color \
+          -var='fitbit_refresh_cb_bucket_name=${{ secrets.FITBIT_REFRESH_CB_BUCKET_NAME }}' \
+          -var='fitbit_start_date_of_use=2016-09-19' \
+          -var='lambda_function_name=fitbit-activity-notifier' \
+          -var='deployment_package_bucket=${{ secrets.DEPLOYMENT_PACKAGE_BUCKET }}' \
+          -var='deployment_package_key=fitbit-activity-notifier/lambda.zip'
       - uses: actions/github-script@v6.2.0
         if: github.event_name == 'pull_request'
         env:
