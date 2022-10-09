@@ -25,7 +25,7 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
       - uses: aws-actions/configure-aws-credentials@v1
         with:
-          role-to-assume: arn:aws:iam::286984104046:role/${{ secrets.GITHUB_ACTION_ROLE_NAME }}
+          role-to-assume: arn:aws:iam::286984104046:role/${{ secrets.ROLE_NAME }}
           aws-region: ap-northeast-1
       - name: Terraform fmt
         id: fmt
