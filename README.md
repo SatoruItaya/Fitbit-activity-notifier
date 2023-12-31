@@ -35,11 +35,8 @@ The custom report contains following items,
 # Structure
 ```
 .
-├── python
-│   Python script for AWS Lamdba and Makefile to deploy
-│
-└── terraform
-    Terraform files to create AWS resources
+└── python
+    Python script for AWS Lamdba and Makefile to deploy
 ```
 
 More details are shown in each README.
