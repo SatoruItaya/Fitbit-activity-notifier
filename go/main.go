@@ -73,19 +73,22 @@ func handler() error {
 		return err
 	}
 
-	lifetimeStepsDataMap, err := getLifetimeStepsHistory(context.TODO(), *newAccessToken)
+	//lifetimeStepsDataMap, err := getLifetimeStepsHistory(context.TODO(), *newAccessToken)
+	_, err = getLifetimeStepsHistory(context.TODO(), *newAccessToken)
 	if err != nil {
 		return err
 	}
-	fmt.Print(lifetimeStepsDataMap)
+	//fmt.Print(lifetimeStepsDataMap)
 
-	/*
-		activityLogList, err := getActivityLogList(context.TODO(), *newAccessToken, "2024-01-01")
-		if err != nil {
-			return err
-		}
-		fmt.Printf("activityLogList: %+v\n", activityLogList)
-	*/
+	activityLogList, err := getActivityLogList(context.TODO(), *newAccessToken, "2024-01-01")
+	if err != nil {
+		return err
+	}
+
+	err = sendRunningReport(activityLogList)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -233,8 +236,7 @@ func getStepsByDateRange(ctx context.Context, access_token string, startDate str
 	return response_data, nil
 }
 
-/*
-func getActivityLogList(ctx context.Context, access_token string, endDate string) (map[string]interface{}, error) {
+func getActivityLogList(ctx context.Context, access_token string, afterDate string) (map[string]interface{}, error) {
 	api_url := "https://api.fitbit.com/1/user/-/activities/list.json"
 	client := &http.Client{}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, api_url, nil)
@@ -242,8 +244,10 @@ func getActivityLogList(ctx context.Context, access_token string, endDate string
 		return nil, fmt.Errorf("failed to create Fitbit API request: %v", err)
 	}
 
+	//TODO devide requests because maximum limit is 100
+
 	query := req.URL.Query()
-	query.Set("afterDate", endDate)
+	query.Set("afterDate", afterDate)
 	query.Set("sort", "asc")
 	query.Set("limit", "100")
 	query.Set("offset", "0")
@@ -264,7 +268,45 @@ func getActivityLogList(ctx context.Context, access_token string, endDate string
 	return response_data, nil
 
 }
-*/
+
+func sendRunningReport(activityLogList map[string]interface{}) error {
+	activities, ok := activityLogList["activities"].([]interface{})
+	if !ok {
+		fmt.Println("Unable to extract activities")
+		return nil
+	}
+
+	for _, a := range activities {
+		activity := a.(map[string]interface{})
+		activityName, ok := activity["activityName"].(string)
+		if !ok {
+			fmt.Println("Unable to extract activityName")
+			return nil
+		}
+
+		if activityName == "Run" {
+			discance, ok := activity["distance"].(float64)
+			if !ok {
+				fmt.Println("Unable to extract distance")
+				return nil
+			}
+
+			t, ok := activity["startTime"].(string)
+			if !ok {
+				fmt.Println("Unable to extract date")
+				return nil
+			}
+			startTime, err := time.Parse("2006-01-02T15:04:05.000-07:00", t)
+			if err != nil {
+				return err
+			}
+
+			fmt.Println("startDate", startTime.Format(DATE_FORMAT))
+			fmt.Println("distance:", discance)
+		}
+	}
+	return nil
+}
 
 /*
 func callFitbitAPI(ctx context.Context, access_token string) (map[string]interface{}, error) {
