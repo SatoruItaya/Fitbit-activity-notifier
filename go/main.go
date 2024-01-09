@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -29,7 +30,6 @@ const (
 )
 
 var (
-	today               = time.Now().UTC()
 	startDate           = os.Getenv("START_DATE")
 	startDateParse, _   = time.Parse(DATE_FORMAT, startDate)
 	refreshCbBucketName = aws.String(os.Getenv("REFRESH_CB_BUCKET_NAME"))
@@ -73,14 +73,16 @@ func handler() error {
 		return err
 	}
 
+	today := time.Now().UTC()
+
 	//lifetimeStepsDataMap, err := getLifetimeStepsHistory(context.TODO(), *newAccessToken)
-	_, err = getLifetimeStepsHistory(context.TODO(), *newAccessToken)
+	_, err = getLifetimeStepsHistory(context.TODO(), *newAccessToken, today)
 	if err != nil {
 		return err
 	}
 	//fmt.Print(lifetimeStepsDataMap)
 
-	activityLogList, err := getActivityLogList(context.TODO(), *newAccessToken, "2024-01-01")
+	activityLogList, err := getYearlyActivityLogList(context.TODO(), *newAccessToken, today)
 	if err != nil {
 		return err
 	}
@@ -180,7 +182,7 @@ func (instances *Instances) refreshAccessToken(ctx context.Context, clientID str
 	return &newToken.AccessToken, nil
 }
 
-func getLifetimeStepsHistory(ctx context.Context, access_token string) (map[string]string, error) {
+func getLifetimeStepsHistory(ctx context.Context, access_token string, today time.Time) (map[string]string, error) {
 	// Number of target days
 	restTargetDays := int(today.Sub(startDateParse).Hours() / 24)
 	count := 0
@@ -236,7 +238,7 @@ func getStepsByDateRange(ctx context.Context, access_token string, startDate str
 	return response_data, nil
 }
 
-func getActivityLogList(ctx context.Context, access_token string, afterDate string) (map[string]interface{}, error) {
+func getYearlyActivityLogList(ctx context.Context, access_token string, today time.Time) (map[string]interface{}, error) {
 	api_url := "https://api.fitbit.com/1/user/-/activities/list.json"
 	client := &http.Client{}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, api_url, nil)
@@ -244,29 +246,47 @@ func getActivityLogList(ctx context.Context, access_token string, afterDate stri
 		return nil, fmt.Errorf("failed to create Fitbit API request: %v", err)
 	}
 
-	//TODO devide requests because maximum limit is 100
-
-	query := req.URL.Query()
-	query.Set("afterDate", afterDate)
-	query.Set("sort", "asc")
-	query.Set("limit", "100")
-	query.Set("offset", "0")
-	req.URL.RawQuery = query.Encode()
-
-	req.Header.Add("Authorization", "Bearer "+access_token)
-	resp, err := client.Do(req)
+	thisYear := today.Format("2006")
+	yearlyActivityLogList := map[string]interface{}{}
+	thisMonth, err := strconv.Atoi(today.Format("1"))
 	if err != nil {
-		return nil, fmt.Errorf("failed to call Fitbit API: %v", err)
-	}
-	defer resp.Body.Close()
-
-	var response_data map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&response_data); err != nil {
-		return nil, fmt.Errorf("failed to decode Fitbit API response: %v", err)
+		return nil, err
 	}
 
-	return response_data, nil
+	//devide requests per month because maximum limit is 100
+	for i := 1; i <= thisMonth; i++ {
+		var month string
+		if i < 10 {
+			month = "0" + strconv.Itoa(i)
+		} else {
+			month = strconv.Itoa(i)
+		}
 
+		query := req.URL.Query()
+		query.Set("afterDate", thisYear+"-"+month+"-01")
+		query.Set("sort", "asc")
+		query.Set("limit", "100")
+		query.Set("offset", "0")
+		req.URL.RawQuery = query.Encode()
+
+		req.Header.Add("Authorization", "Bearer "+access_token)
+		resp, err := client.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("failed to call Fitbit API: %v", err)
+		}
+		defer resp.Body.Close()
+
+		var monthlyActivityLogList map[string]interface{}
+		if err := json.NewDecoder(resp.Body).Decode(&monthlyActivityLogList); err != nil {
+			return nil, fmt.Errorf("failed to decode Fitbit API response: %v", err)
+		}
+
+		for k, v := range monthlyActivityLogList {
+			yearlyActivityLogList[k] = v
+		}
+	}
+
+	return yearlyActivityLogList, nil
 }
 
 func sendRunningReport(activityLogList map[string]interface{}) error {
