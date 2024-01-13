@@ -3,10 +3,13 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"time"
 
@@ -25,8 +28,12 @@ type Instances struct {
 }
 
 const (
-	LIMIT_DAYS  int = 1095
-	DATE_FORMAT     = "2006-01-02"
+	LIMIT_DAYS         int = 1095
+	DATE_FORMAT            = "2006-01-02"
+	REPORT_DATE_FORMAT     = "1/2"
+	DAY_OF_WEEK_FORMAT     = "Mon"
+	SEPARATOR              = "======================"
+	DECIMAL_PLACES         = 2
 )
 
 var (
@@ -73,21 +80,20 @@ func handler() error {
 		return err
 	}
 
-	today := time.Now().UTC()
+	today := time.Now().Local()
 
 	//lifetimeStepsDataMap, err := getLifetimeStepsHistory(context.TODO(), *newAccessToken)
 	_, err = getLifetimeStepsHistory(context.TODO(), *newAccessToken, today)
 	if err != nil {
 		return err
 	}
-	//fmt.Print(lifetimeStepsDataMap)
 
-	activityLogList, err := getYearlyActivityLogList(context.TODO(), *newAccessToken, today)
+	yearlyRunningLog, err := getYearlyRunningLog(context.TODO(), *newAccessToken, today)
 	if err != nil {
 		return err
 	}
 
-	err = sendRunningReport(activityLogList)
+	err = sendRunningReport(yearlyRunningLog, today)
 	if err != nil {
 		return err
 	}
@@ -238,117 +244,111 @@ func getStepsByDateRange(ctx context.Context, access_token string, startDate str
 	return response_data, nil
 }
 
-func getYearlyActivityLogList(ctx context.Context, access_token string, today time.Time) (map[string]interface{}, error) {
+func getYearlyRunningLog(ctx context.Context, access_token string, today time.Time) (map[time.Time]float64, error) {
 	api_url := "https://api.fitbit.com/1/user/-/activities/list.json"
 	client := &http.Client{}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, api_url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Fitbit API request: %v", err)
 	}
+	req.Header.Add("Authorization", "Bearer "+access_token)
 
-	thisYear := today.Format("2006")
-	yearlyActivityLogList := map[string]interface{}{}
-	thisMonth, err := strconv.Atoi(today.Format("1"))
-	if err != nil {
-		return nil, err
-	}
+	thisYear, _ := strconv.Atoi(today.Format("2006"))
+	targetDate := today
+	baseDate := time.Date(thisYear-1, time.December, 31, 23, 59, 59, 999, time.UTC)
 
-	//devide requests per month because maximum limit is 100
-	for i := 1; i <= thisMonth; i++ {
-		var month string
-		if i < 10 {
-			month = "0" + strconv.Itoa(i)
-		} else {
-			month = strconv.Itoa(i)
-		}
+	yearlyRunningLog := map[time.Time]float64{}
 
+	for targetDate.After(baseDate) {
 		query := req.URL.Query()
-		query.Set("afterDate", thisYear+"-"+month+"-01")
-		query.Set("sort", "asc")
+		query.Set("beforeDate", targetDate.Format(DATE_FORMAT))
+		query.Set("sort", "desc")
 		query.Set("limit", "100")
 		query.Set("offset", "0")
 		req.URL.RawQuery = query.Encode()
 
-		req.Header.Add("Authorization", "Bearer "+access_token)
 		resp, err := client.Do(req)
 		if err != nil {
 			return nil, fmt.Errorf("failed to call Fitbit API: %v", err)
 		}
 		defer resp.Body.Close()
 
-		var monthlyActivityLogList map[string]interface{}
-		if err := json.NewDecoder(resp.Body).Decode(&monthlyActivityLogList); err != nil {
+		var activityLogList map[string]interface{}
+		if err := json.NewDecoder(resp.Body).Decode(&activityLogList); err != nil {
 			return nil, fmt.Errorf("failed to decode Fitbit API response: %v", err)
 		}
 
-		for k, v := range monthlyActivityLogList {
-			yearlyActivityLogList[k] = v
-		}
-	}
-
-	return yearlyActivityLogList, nil
-}
-
-func sendRunningReport(activityLogList map[string]interface{}) error {
-	activities, ok := activityLogList["activities"].([]interface{})
-	if !ok {
-		fmt.Println("Unable to extract activities")
-		return nil
-	}
-
-	for _, a := range activities {
-		activity := a.(map[string]interface{})
-		activityName, ok := activity["activityName"].(string)
+		activities, ok := activityLogList["activities"].([]interface{})
 		if !ok {
-			fmt.Println("Unable to extract activityName")
-			return nil
+			return nil, errors.New("unable to extract activities")
 		}
 
-		if activityName == "Run" {
-			discance, ok := activity["distance"].(float64)
+		for i, a := range activities {
+			activity := a.(map[string]interface{})
+			activityName, ok := activity["activityName"].(string)
 			if !ok {
-				fmt.Println("Unable to extract distance")
-				return nil
+				return nil, errors.New("unable to extract activityName")
 			}
 
 			t, ok := activity["startTime"].(string)
 			if !ok {
-				fmt.Println("Unable to extract date")
-				return nil
+				return nil, errors.New("unable to extract date")
 			}
 			startTime, err := time.Parse("2006-01-02T15:04:05.000-07:00", t)
 			if err != nil {
-				return err
+				return nil, err
 			}
 
-			fmt.Println("startDate", startTime.Format(DATE_FORMAT))
-			fmt.Println("distance:", discance)
+			if activityName == "Run" {
+				distance, ok := activity["distance"].(float64)
+				if !ok {
+					return nil, errors.New("unable to extract distance")
+				}
+
+				if startTime.After(baseDate) {
+					yearlyRunningLog[startTime] = distance
+				}
+			}
+
+			if i == len(activities)-1 {
+				targetDate = startTime
+			}
 		}
 	}
+	return yearlyRunningLog, nil
+}
+
+func sendRunningReport(yearlyRunningLog map[time.Time]float64, today time.Time) error {
+	var keys []time.Time
+	for key := range yearlyRunningLog {
+		keys = append(keys, key)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i].Before(keys[j])
+	})
+
+	yearlyDistance := 0.0
+	weeklyDistance := 0.0
+	report := SEPARATOR + "\nRunning Report\n"
+	startDate := today.AddDate(0, 0, -7).Add(-time.Nanosecond)
+	endDate := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
+
+	for _, k := range keys {
+		if k.After(startDate) && k.Before(endDate) {
+			report += k.Format(REPORT_DATE_FORMAT) + " " + k.Format(DAY_OF_WEEK_FORMAT) + " " + strconv.FormatFloat(roundToDecimal(yearlyRunningLog[k]), 'f', -1, 64) + "km\n"
+			weeklyDistance += yearlyRunningLog[k]
+		}
+		yearlyDistance += yearlyRunningLog[k]
+	}
+
+	report += "\n"
+	report += "Weekly Distance: " + strconv.FormatFloat(roundToDecimal(weeklyDistance), 'f', -1, 64) + "km\n"
+	report += "Yearly Distance: " + strconv.FormatFloat(roundToDecimal(yearlyDistance), 'f', -1, 64) + "km\n"
+
 	return nil
 }
 
-/*
-func callFitbitAPI(ctx context.Context, access_token string) (map[string]interface{}, error) {
-	api_url := "https://api.fitbit.com/1/user/-/profile.json"
-	client := &http.Client{}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, api_url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Fitbit API request: %v", err)
-	}
-
-	req.Header.Add("Authorization", "Bearer "+access_token)
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to call Fitbit API: %v", err)
-	}
-	defer resp.Body.Close()
-
-	var response_data map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&response_data); err != nil {
-		return nil, fmt.Errorf("failed to decode Fitbit API response: %v", err)
-	}
-
-	return response_data, nil
+func roundToDecimal(num float64) float64 {
+	shift := math.Pow(10, float64(DECIMAL_PLACES))
+	return math.Round(num*shift) / shift
 }
-*/
