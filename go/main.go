@@ -28,12 +28,13 @@ type Instances struct {
 }
 
 const (
-	LIMIT_DAYS         int = 1095
-	DATE_FORMAT            = "2006-01-02"
-	REPORT_DATE_FORMAT     = "1/2"
-	DAY_OF_WEEK_FORMAT     = "Mon"
-	SEPARATOR              = "======================"
-	DECIMAL_PLACES         = 2
+	LIMIT_DAYS                  int = 1095
+	DATE_FORMAT                     = "2006-01-02"
+	YEARLY_REPORT_DATE_FORMAT       = "1/2"
+	LIFETIME_REPORT_DATE_FORMAT     = "2006/01/02"
+	DAY_OF_WEEK_FORMAT              = "Mon"
+	SEPARATOR                       = "======================\n"
+	DECIMAL_PLACES                  = 2
 )
 
 var (
@@ -42,6 +43,11 @@ var (
 	refreshCbBucketName = aws.String(os.Getenv("REFRESH_CB_BUCKET_NAME"))
 	refreshCbFileName   = aws.String(os.Getenv("REFRESH_CB_FILE_NAME_GO"))
 )
+
+type Steps struct {
+	Date  time.Time
+	Value int
+}
 
 func main() {
 	lambda.Start(handler)
@@ -82,8 +88,12 @@ func handler() error {
 
 	today := time.Now().Local()
 
-	//lifetimeStepsDataMap, err := getLifetimeStepsHistory(context.TODO(), *newAccessToken)
-	_, err = getLifetimeStepsHistory(context.TODO(), *newAccessToken, today)
+	lifetimeStepsData, err := getLifetimeStepsHistory(context.TODO(), *newAccessToken, today)
+	if err != nil {
+		return err
+	}
+
+	err = sendStepsReport(lifetimeStepsData, today)
 	if err != nil {
 		return err
 	}
@@ -131,7 +141,6 @@ func (instances *Instances) getRefreshToken() (*string, error) {
 	refreshToken := string(body)
 
 	return &refreshToken, nil
-
 }
 
 func getFitbitConfig(clientID string, clientSecret string) *oauth2.Config {
@@ -188,12 +197,12 @@ func (instances *Instances) refreshAccessToken(ctx context.Context, clientID str
 	return &newToken.AccessToken, nil
 }
 
-func getLifetimeStepsHistory(ctx context.Context, access_token string, today time.Time) (map[string]string, error) {
+func getLifetimeStepsHistory(ctx context.Context, access_token string, today time.Time) (map[time.Time]int, error) {
 	// Number of target days
 	restTargetDays := int(today.Sub(startDateParse).Hours() / 24)
 	count := 0
 
-	lifetimeStepsDataMap := map[string]string{}
+	lifetimeStepsData := map[time.Time]int{}
 
 	for restTargetDays > 0 {
 		tmpEndDate := today.Add(-24 * time.Hour * time.Duration(1+LIMIT_DAYS*count))
@@ -211,20 +220,33 @@ func getLifetimeStepsHistory(ctx context.Context, access_token string, today tim
 		}
 
 		for _, dailyHistory := range tmpStepsData["activities-steps"] {
-			lifetimeStepsDataMap[dailyHistory["dateTime"]] = dailyHistory["value"]
+			dateTime, err := time.Parse(DATE_FORMAT, dailyHistory["dateTime"])
+			if err != nil {
+				return nil, err
+			}
+
+			//timezone指定
+			dateTime = dateTime.Local()
+
+			step, err := strconv.Atoi(dailyHistory["value"])
+			if err != nil {
+				return nil, err
+			}
+
+			lifetimeStepsData[dateTime] = step
 		}
 
 		restTargetDays -= LIMIT_DAYS
 		count += 1
 	}
 
-	return lifetimeStepsDataMap, nil
+	return lifetimeStepsData, nil
 }
 
 func getStepsByDateRange(ctx context.Context, access_token string, startDate string, endDate string) (map[string][]map[string]string, error) {
-	api_url := "https://api.fitbit.com/1/user/-/activities/steps/date/" + startDate + "/" + endDate + ".json"
+	apiUrl := "https://api.fitbit.com/1/user/-/activities/steps/date/" + startDate + "/" + endDate + ".json"
 	client := &http.Client{}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, api_url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiUrl, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Fitbit API request: %v", err)
 	}
@@ -236,18 +258,66 @@ func getStepsByDateRange(ctx context.Context, access_token string, startDate str
 	}
 	defer resp.Body.Close()
 
-	var response_data map[string][]map[string]string
-	if err := json.NewDecoder(resp.Body).Decode(&response_data); err != nil {
+	var responseData map[string][]map[string]string
+	if err := json.NewDecoder(resp.Body).Decode(&responseData); err != nil {
 		return nil, fmt.Errorf("failed to decode Fitbit API response: %v", err)
 	}
 
-	return response_data, nil
+	return responseData, nil
+}
+
+func sendStepsReport(lifetimeStepsData map[time.Time]int, today time.Time) error {
+	yeatStartData := time.Date(today.Year(), time.January, 1, 0, 0, 0, 0, today.Location()).Add(-time.Nanosecond)
+
+	// create weekly report
+	targetData := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location()).AddDate(0, 0, -7)
+	weeklyReport := "Weekly Report\n"
+	for i := 0; i < 7; i++ {
+		weeklyReport += targetData.Format(YEARLY_REPORT_DATE_FORMAT) + " " + targetData.Format(DAY_OF_WEEK_FORMAT) + " " + strconv.Itoa(lifetimeStepsData[targetData]) + "\n"
+		targetData = targetData.AddDate(0, 0, 1)
+	}
+
+	// create sorted Steps{} list by steps
+	var items []Steps
+	for k, v := range lifetimeStepsData {
+		items = append(items, Steps{k, v})
+	}
+	sort.SliceStable(items, func(i, j int) bool {
+		if items[i].Value == items[j].Value {
+			return items[i].Date.Before(items[j].Date)
+		}
+		return items[i].Value > items[j].Value
+	})
+
+	yearlyTop5Report := "Top Records in This Year\n\n"
+	lifetimeTop5Report := "Top Records in This Lifetime\n\n"
+	yealyDataCount := 0
+	count := 0
+
+	for yealyDataCount <= 5 {
+		//extract yearly top5 data
+		if items[count].Date.After(yeatStartData) {
+			yearlyTop5Report += strconv.Itoa(items[count].Value) + "(" + items[count].Date.Format(YEARLY_REPORT_DATE_FORMAT) + ")\n"
+			yealyDataCount += 1
+		}
+
+		//extract lifetime top5 data
+		if count < 5 {
+			lifetimeTop5Report += strconv.Itoa(items[count].Value) + "(" + items[count].Date.Format(LIFETIME_REPORT_DATE_FORMAT) + ")\n"
+		}
+		count += 1
+	}
+
+	print(SEPARATOR + weeklyReport + SEPARATOR + yearlyTop5Report + SEPARATOR + lifetimeTop5Report)
+
+	return nil
+
 }
 
 func getYearlyRunningLog(ctx context.Context, access_token string, today time.Time) (map[time.Time]float64, error) {
-	api_url := "https://api.fitbit.com/1/user/-/activities/list.json"
+	apiUrl := "https://api.fitbit.com/1/user/-/activities/list.json"
 	client := &http.Client{}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, api_url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiUrl, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Fitbit API request: %v", err)
 	}
@@ -329,13 +399,13 @@ func sendRunningReport(yearlyRunningLog map[time.Time]float64, today time.Time) 
 
 	yearlyDistance := 0.0
 	weeklyDistance := 0.0
-	report := SEPARATOR + "\nRunning Report\n"
-	startDate := today.AddDate(0, 0, -7).Add(-time.Nanosecond)
-	endDate := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
+	weekStartDate := today.AddDate(0, 0, -7).Add(-time.Nanosecond)
+	weekEndDate := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
+	report := SEPARATOR + "Running Report\n"
 
 	for _, k := range keys {
-		if k.After(startDate) && k.Before(endDate) {
-			report += k.Format(REPORT_DATE_FORMAT) + " " + k.Format(DAY_OF_WEEK_FORMAT) + " " + strconv.FormatFloat(roundToDecimal(yearlyRunningLog[k]), 'f', -1, 64) + "km\n"
+		if k.After(weekStartDate) && k.Before(weekEndDate) {
+			report += k.Format(YEARLY_REPORT_DATE_FORMAT) + " " + k.Format(DAY_OF_WEEK_FORMAT) + " " + strconv.FormatFloat(roundToDecimal(yearlyRunningLog[k]), 'f', -1, 64) + "km\n"
 			weeklyDistance += yearlyRunningLog[k]
 		}
 		yearlyDistance += yearlyRunningLog[k]
