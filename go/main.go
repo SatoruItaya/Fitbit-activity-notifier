@@ -286,7 +286,7 @@ func generateStepsReport(lifetimeStepsData map[time.Time]int, today time.Time) s
 	targetData := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location()).AddDate(0, 0, -7)
 	weeklyReport := "Weekly Report\n"
 	for i := 0; i < 7; i++ {
-		weeklyReport += targetData.Format(YEARLY_REPORT_DATE_FORMAT) + " " + targetData.Format(DAY_OF_WEEK_FORMAT) + " " + strconv.Itoa(lifetimeStepsData[targetData]) + "\n"
+		weeklyReport += targetData.Format(YEARLY_REPORT_DATE_FORMAT) + " " + targetData.Format(DAY_OF_WEEK_FORMAT) + " " + formatNumberWithComma(lifetimeStepsData[targetData]) + "\n"
 		targetData = targetData.AddDate(0, 0, 1)
 	}
 
@@ -310,13 +310,13 @@ func generateStepsReport(lifetimeStepsData map[time.Time]int, today time.Time) s
 	for yealyDataCount <= 5 {
 		//extract yearly top5 data
 		if items[count].Date.After(yeatStartData) {
-			yearlyTop5Report += strconv.Itoa(items[count].Value) + "(" + items[count].Date.Format(YEARLY_REPORT_DATE_FORMAT) + ")\n"
+			yearlyTop5Report += formatNumberWithComma(items[count].Value) + "(" + items[count].Date.Format(YEARLY_REPORT_DATE_FORMAT) + ")\n"
 			yealyDataCount += 1
 		}
 
 		//extract lifetime top5 data
 		if count < 5 {
-			lifetimeTop5Report += strconv.Itoa(items[count].Value) + "(" + items[count].Date.Format(LIFETIME_REPORT_DATE_FORMAT) + ")\n"
+			lifetimeTop5Report += formatNumberWithComma(items[count].Value) + "(" + items[count].Date.Format(LIFETIME_REPORT_DATE_FORMAT) + ")\n"
 		}
 		count += 1
 	}
@@ -431,6 +431,19 @@ func generateRunningReport(yearlyRunningLog map[time.Time]float64, today time.Ti
 func roundToDecimal(num float64) float64 {
 	shift := math.Pow(10, float64(DECIMAL_PLACES))
 	return math.Round(num*shift) / shift
+}
+
+func formatNumberWithComma(number int) string {
+	str := strconv.FormatInt(int64(number), 10)
+	result := ""
+	for i := len(str); i > 0; i -= 3 {
+		if i-3 > 0 {
+			result = "," + str[i-3:i] + result
+		} else {
+			result = str[:i] + result
+		}
+	}
+	return result
 }
 
 func sendReport(token string, report string) error {
