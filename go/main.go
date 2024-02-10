@@ -6,11 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"math"
 	"net/http"
+	"net/url"
 	"os"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -93,7 +96,15 @@ func handler() error {
 		return err
 	}
 
-	err = sendStepsReport(lifetimeStepsData, today)
+	lineNotifyTokenParameterName := os.Getenv("LINE_NOTIFY_TOKEN_PARAMETER_NAME")
+	lineNotifyToken, err := instances.getParameter(lineNotifyTokenParameterName)
+	if err != nil {
+		return err
+	}
+
+	stepsReport := generateStepsReport(lifetimeStepsData, today)
+
+	err = sendReport(*lineNotifyToken, stepsReport)
 	if err != nil {
 		return err
 	}
@@ -103,7 +114,9 @@ func handler() error {
 		return err
 	}
 
-	err = sendRunningReport(yearlyRunningLog, today)
+	runningReport := generateRunningReport(yearlyRunningLog, today)
+
+	err = sendReport(*lineNotifyToken, runningReport)
 	if err != nil {
 		return err
 	}
@@ -266,7 +279,7 @@ func getStepsByDateRange(ctx context.Context, access_token string, startDate str
 	return responseData, nil
 }
 
-func sendStepsReport(lifetimeStepsData map[time.Time]int, today time.Time) error {
+func generateStepsReport(lifetimeStepsData map[time.Time]int, today time.Time) string {
 	yeatStartData := time.Date(today.Year(), time.January, 1, 0, 0, 0, 0, today.Location()).Add(-time.Nanosecond)
 
 	// create weekly report
@@ -308,10 +321,7 @@ func sendStepsReport(lifetimeStepsData map[time.Time]int, today time.Time) error
 		count += 1
 	}
 
-	print(SEPARATOR + weeklyReport + SEPARATOR + yearlyTop5Report + SEPARATOR + lifetimeTop5Report)
-
-	return nil
-
+	return "\n" + SEPARATOR + weeklyReport + SEPARATOR + yearlyTop5Report + SEPARATOR + lifetimeTop5Report
 }
 
 func getYearlyRunningLog(ctx context.Context, access_token string, today time.Time) (map[time.Time]float64, error) {
@@ -388,7 +398,7 @@ func getYearlyRunningLog(ctx context.Context, access_token string, today time.Ti
 	return yearlyRunningLog, nil
 }
 
-func sendRunningReport(yearlyRunningLog map[time.Time]float64, today time.Time) error {
+func generateRunningReport(yearlyRunningLog map[time.Time]float64, today time.Time) string {
 	var keys []time.Time
 	for key := range yearlyRunningLog {
 		keys = append(keys, key)
@@ -401,7 +411,7 @@ func sendRunningReport(yearlyRunningLog map[time.Time]float64, today time.Time) 
 	weeklyDistance := 0.0
 	weekStartDate := today.AddDate(0, 0, -7).Add(-time.Nanosecond)
 	weekEndDate := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
-	report := SEPARATOR + "Running Report\n"
+	report := "\n" + SEPARATOR + "Running Report\n"
 
 	for _, k := range keys {
 		if k.After(weekStartDate) && k.Before(weekEndDate) {
@@ -415,10 +425,36 @@ func sendRunningReport(yearlyRunningLog map[time.Time]float64, today time.Time) 
 	report += "Weekly Distance: " + strconv.FormatFloat(roundToDecimal(weeklyDistance), 'f', -1, 64) + "km\n"
 	report += "Yearly Distance: " + strconv.FormatFloat(roundToDecimal(yearlyDistance), 'f', -1, 64) + "km\n"
 
-	return nil
+	return report
 }
 
 func roundToDecimal(num float64) float64 {
 	shift := math.Pow(10, float64(DECIMAL_PLACES))
 	return math.Round(num*shift) / shift
+}
+
+func sendReport(token string, report string) error {
+	apiUrl := "https://notify-api.line.me/api/notify"
+	u, err := url.ParseRequestURI(apiUrl)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	c := &http.Client{}
+	form := url.Values{}
+	form.Add("message", report)
+	body := strings.NewReader(form.Encode())
+	req, err := http.NewRequest("POST", u.String(), body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Authorization", "Bearer "+token)
+	_, err = c.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return nil
 }
