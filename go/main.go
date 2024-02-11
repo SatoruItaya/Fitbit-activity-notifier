@@ -284,11 +284,17 @@ func generateStepsReport(lifetimeStepsData map[time.Time]int, today time.Time) s
 
 	// create weekly report
 	targetData := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location()).AddDate(0, 0, -7)
-	weeklyReport := "Weekly Report\n"
+	weeklyReport := "Weekly Report\n\n"
+	weeklyTotalStep := 0
 	for i := 0; i < 7; i++ {
 		weeklyReport += targetData.Format(YEARLY_REPORT_DATE_FORMAT) + " " + targetData.Format(DAY_OF_WEEK_FORMAT) + " " + formatNumberWithComma(lifetimeStepsData[targetData]) + "\n"
 		targetData = targetData.AddDate(0, 0, 1)
+		weeklyTotalStep += lifetimeStepsData[targetData]
 	}
+
+	weeklyReport += "\n"
+	weeklyReport += "Total: " + formatNumberWithComma(weeklyTotalStep) + "\n"
+	weeklyReport += "Average: " + formatNumberWithComma(weeklyTotalStep/7) + "\n"
 
 	// create sorted Steps{} list by steps
 	var items []Steps
