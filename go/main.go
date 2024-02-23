@@ -78,13 +78,18 @@ func handler() error {
 		return err
 	}
 
+	// if data is missing
+	if len(lifetimeStepsData) <= 7 {
+		return nil
+	}
+
+	stepsReport := generateStepsReport(lifetimeStepsData, today)
+
 	lineNotifyTokenParameterName := os.Getenv("LINE_NOTIFY_TOKEN_PARAMETER_NAME")
 	lineNotifyToken, err := instances.getParameter(lineNotifyTokenParameterName)
 	if err != nil {
 		return err
 	}
-
-	stepsReport := generateStepsReport(lifetimeStepsData, today)
 
 	err = sendReport(*lineNotifyToken, stepsReport)
 	if err != nil {
