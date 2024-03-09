@@ -130,7 +130,7 @@ func generateRunningReport(yearlyRunningLog map[time.Time]float64, today time.Ti
 
 	report += "\n"
 	report += "Weekly Distance: " + strconv.FormatFloat(roundToDecimal(weeklyDistance), 'f', -1, 64) + "km\n"
-	report += "Yearly Distance: " + strconv.FormatFloat(roundToDecimal(yearlyDistance), 'f', -1, 64) + "km\n"
+	report += "Yearly Distance: " + strconv.FormatFloat(roundToDecimal(yearlyDistance), 'f', -1, 64) + "km"
 
 	return report
 }

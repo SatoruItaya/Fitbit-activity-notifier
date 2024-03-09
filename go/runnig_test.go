@@ -92,3 +92,45 @@ func TestExtractRunningLog(t *testing.T) {
 		t.Errorf("Expected %v, but got %T", UnableToExtractDistance, err)
 	}
 }
+
+func TestGenerateRunningReport(t *testing.T) {
+	today := time.Date(2024, time.March, 9, 23, 59, 59, 999, time.UTC)
+
+	// There are runnning activities foa a week
+	yearlyRunningLog := map[time.Time]float64{
+		time.Date(2024, time.March, 8, 23, 59, 59, 999, time.UTC):   3.08,
+		time.Date(2024, time.March, 7, 23, 59, 59, 999, time.UTC):   5.08,
+		time.Date(2024, time.January, 2, 23, 59, 59, 999, time.UTC): 10.08,
+	}
+
+	expected := `
+======================
+Running Report
+3/7 Thu 5.08km
+3/8 Fri 3.08km
+
+Weekly Distance: 8.16km
+Yearly Distance: 18.24km`
+
+	acutual := generateRunningReport(yearlyRunningLog, today)
+	if expected != acutual {
+		t.Errorf("Expected %v, but got %v", expected, acutual)
+	}
+
+	// There are no runnning activities foa a week
+	yearlyRunningLog = map[time.Time]float64{
+		time.Date(2024, time.January, 2, 23, 59, 59, 999, time.UTC): 10.08,
+	}
+	expected = `
+======================
+Running Report
+
+Weekly Distance: 0km
+Yearly Distance: 10.08km`
+
+	acutual = generateRunningReport(yearlyRunningLog, today)
+	if expected != acutual {
+		t.Errorf("Expected %v, but got %v", expected, acutual)
+	}
+
+}
