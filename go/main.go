@@ -96,7 +96,12 @@ func handler() error {
 		return err
 	}
 
-	yearlyRunningLog, err := getYearlyRunningLog(context.TODO(), *newAccessToken, today)
+	activityList, err := getActivityList(context.TODO(), *newAccessToken, today)
+	if err != nil {
+		return err
+	}
+
+	yearlyRunningLog, err := extractRunningLog(activityList, today)
 	if err != nil {
 		return err
 	}

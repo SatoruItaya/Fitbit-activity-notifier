@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func getYearlyRunningLog(ctx context.Context, access_token string, today time.Time) (map[time.Time]float64, error) {
+func getActivityList(ctx context.Context, access_token string, today time.Time) ([]interface{}, error) {
 	apiUrl := "https://api.fitbit.com/1/user/-/activities/list.json"
 	client := &http.Client{}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiUrl, nil)
@@ -24,7 +24,7 @@ func getYearlyRunningLog(ctx context.Context, access_token string, today time.Ti
 	targetDate := today
 	baseDate := time.Date(thisYear-1, time.December, 31, 23, 59, 59, 999, time.UTC)
 
-	yearlyRunningLog := map[time.Time]float64{}
+	var activityList []interface{}
 
 	for targetDate.After(baseDate) {
 		query := req.URL.Query()
@@ -50,38 +50,58 @@ func getYearlyRunningLog(ctx context.Context, access_token string, today time.Ti
 			return nil, errors.New("unable to extract activities")
 		}
 
-		for i, a := range activities {
-			activity := a.(map[string]interface{})
-			activityName, ok := activity["activityName"].(string)
+		activityList = append(activityList, activities...)
+
+		// get statTime for last element
+		t, ok := activities[len(activities)-1].(map[string]interface{})["startTime"].(string)
+		if !ok {
+			return nil, errors.New("unable to extract date")
+		}
+
+		startTime, err := time.Parse("2006-01-02T15:04:05.000-07:00", t)
+		if err != nil {
+			return nil, err
+		}
+
+		targetDate = startTime
+	}
+	return activityList, nil
+}
+
+func extractRunningLog(activitiesList []interface{}, today time.Time) (map[time.Time]float64, error) {
+	yearlyRunningLog := map[time.Time]float64{}
+
+	thisYear, _ := strconv.Atoi(today.Format("2006"))
+	baseDate := time.Date(thisYear-1, time.December, 31, 23, 59, 59, 999, time.UTC)
+
+	for _, a := range activitiesList {
+		activity := a.(map[string]interface{})
+		activityName, ok := activity["activityName"].(string)
+		if !ok {
+			return nil, errors.New(UnableToExtractAcitivityName)
+		}
+
+		t, ok := activity["startTime"].(string)
+		if !ok {
+			return nil, errors.New(UnableToExtractStartTime)
+		}
+		startTime, err := time.Parse("2006-01-02T15:04:05.000-07:00", t)
+		if err != nil {
+			return nil, err
+		}
+
+		if activityName == "Run" {
+			distance, ok := activity["distance"].(float64)
 			if !ok {
-				return nil, errors.New("unable to extract activityName")
+				return nil, errors.New(UnableToExtractDistance)
 			}
 
-			t, ok := activity["startTime"].(string)
-			if !ok {
-				return nil, errors.New("unable to extract date")
-			}
-			startTime, err := time.Parse("2006-01-02T15:04:05.000-07:00", t)
-			if err != nil {
-				return nil, err
-			}
-
-			if activityName == "Run" {
-				distance, ok := activity["distance"].(float64)
-				if !ok {
-					return nil, errors.New("unable to extract distance")
-				}
-
-				if startTime.After(baseDate) {
-					yearlyRunningLog[startTime] = distance
-				}
-			}
-
-			if i == len(activities)-1 {
-				targetDate = startTime
+			if startTime.After(baseDate) {
+				yearlyRunningLog[startTime] = distance
 			}
 		}
 	}
+
 	return yearlyRunningLog, nil
 }
 
