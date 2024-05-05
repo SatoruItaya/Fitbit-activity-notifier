@@ -112,9 +112,9 @@ Running Report
 Weekly Distance: 8.16km
 Yearly Distance: 18.24km`
 
-	acutual := generateRunningReport(yearlyRunningLog, today)
-	if expected != acutual {
-		t.Errorf("Expected %v, but got %v", expected, acutual)
+	actual := generateRunningReport(yearlyRunningLog, today)
+	if expected != actual {
+		t.Errorf("Expected %v, but got %v", expected, actual)
 	}
 
 	// There are no runnning activities foa a week
@@ -128,9 +128,9 @@ Running Report
 Weekly Distance: 0km
 Yearly Distance: 10.08km`
 
-	acutual = generateRunningReport(yearlyRunningLog, today)
-	if expected != acutual {
-		t.Errorf("Expected %v, but got %v", expected, acutual)
+	actual = generateRunningReport(yearlyRunningLog, today)
+	if expected != actual {
+		t.Errorf("Expected %v, but got %v", expected, actual)
 	}
 
 }
