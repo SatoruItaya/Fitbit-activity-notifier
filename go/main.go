@@ -73,7 +73,7 @@ func handler() error {
 
 	today := time.Now().Local()
 
-	lifetimeStepsData, err := getLifetimeStepsHistory(context.TODO(), *newAccessToken, today)
+	lifetimeStepsData, err := getLifetimeStepsHistory(context.TODO(), *newAccessToken, today, getStepsByDateRange)
 	if err != nil {
 		return err
 	}

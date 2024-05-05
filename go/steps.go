@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"sort"
 	"strconv"
 	"time"
 )
 
-func getLifetimeStepsHistory(ctx context.Context, access_token string, today time.Time) (map[time.Time]int, error) {
+func getLifetimeStepsHistory(ctx context.Context, access_token string, today time.Time, getStepsFunc func(context.Context, string, string, string) (map[string][]map[string]string, error)) (map[time.Time]int, error) {
 	// Number of target days
 	restTargetDays := int(today.Sub(startDateParse).Hours() / 24)
 	count := 0
@@ -27,7 +28,7 @@ func getLifetimeStepsHistory(ctx context.Context, access_token string, today tim
 			tmpStartDate = startDateParse
 		}
 
-		tmpStepsData, err := getStepsByDateRange(context.TODO(), access_token, tmpStartDate.Format(DATE_FORMAT), tmpEndDate.Format(DATE_FORMAT))
+		tmpStepsData, err := getStepsFunc(ctx, access_token, tmpStartDate.Format(DATE_FORMAT), tmpEndDate.Format(DATE_FORMAT))
 		if err != nil {
 			return nil, err
 		}
@@ -38,8 +39,7 @@ func getLifetimeStepsHistory(ctx context.Context, access_token string, today tim
 				return nil, err
 			}
 
-			//timezone指定
-			dateTime = dateTime.Local()
+			dateTime = time.Date(dateTime.Year(), dateTime.Month(), dateTime.Day(), 0, 0, 0, 0, time.Local)
 
 			step, err := strconv.Atoi(dailyHistory["value"])
 			if err != nil {
@@ -92,9 +92,13 @@ func generateStepsReport(lifetimeStepsData map[time.Time]int, today time.Time) s
 		weeklyTotalStep += lifetimeStepsData[targetData]
 	}
 
+	floatWeeklyAvetageSteps := float64(weeklyTotalStep) / float64(7)
+	roundedWeeklyAvetageSteps := math.Round(floatWeeklyAvetageSteps*10) / 10
+	intWeeklyAvetageSteps := int(roundedWeeklyAvetageSteps)
+
 	weeklyReport += "\n"
 	weeklyReport += "Total: " + formatNumberWithComma(weeklyTotalStep) + "\n"
-	weeklyReport += "Average: " + formatNumberWithComma(weeklyTotalStep/7) + "\n"
+	weeklyReport += "Average: " + formatNumberWithComma(intWeeklyAvetageSteps) + "\n"
 
 	// create sorted Steps{} list by steps
 	var items []Steps
@@ -109,7 +113,7 @@ func generateStepsReport(lifetimeStepsData map[time.Time]int, today time.Time) s
 	})
 
 	yearlyTop5Report := "Top Records in This Year\n\n"
-	lifetimeTop5Report := "Top Records in This Lifetime\n\n"
+	lifetimeTop5Report := "Top Records in Lifetime\n\n"
 	yealyDataCount := 0
 	count := 0
 
