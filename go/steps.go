@@ -88,8 +88,8 @@ func generateStepsReport(lifetimeStepsData map[time.Time]int, today time.Time) s
 	weeklyTotalStep := 0
 	for i := 0; i < 7; i++ {
 		weeklyReport += targetData.Format(YEARLY_REPORT_DATE_FORMAT) + " " + targetData.Format(DAY_OF_WEEK_FORMAT) + " " + formatNumberWithComma(lifetimeStepsData[targetData]) + "\n"
-		targetData = targetData.AddDate(0, 0, 1)
 		weeklyTotalStep += lifetimeStepsData[targetData]
+		targetData = targetData.AddDate(0, 0, 1)
 	}
 
 	floatWeeklyAvetageSteps := float64(weeklyTotalStep) / float64(7)
@@ -117,7 +117,7 @@ func generateStepsReport(lifetimeStepsData map[time.Time]int, today time.Time) s
 	yealyDataCount := 0
 	count := 0
 
-	for yealyDataCount <= 5 {
+	for yealyDataCount < 5 {
 		//extract yearly top5 data
 		if items[count].Date.After(yeatStartData) {
 			yearlyTop5Report += formatNumberWithComma(items[count].Value) + "(" + items[count].Date.Format(YEARLY_REPORT_DATE_FORMAT) + ")\n"

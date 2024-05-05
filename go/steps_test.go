@@ -87,15 +87,15 @@ func TestGenerateStepsReport(t *testing.T) {
 Weekly Report
 
 1/7 Sun 1,000
-1/8 Mon 1,000
+1/8 Mon 2,000
 1/9 Tue 1,000
 1/10 Wed 18,998
 1/11 Thu 1,000
 1/12 Fri 1,000
 1/13 Sat 19,000
 
-Total: 42,998
-Average: 6,143
+Total: 43,998
+Average: 6,285
 ======================
 Top Records in This Year
 

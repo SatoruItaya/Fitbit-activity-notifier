@@ -16,7 +16,7 @@ const (
 	LIMIT_DAYS                  int = 1095
 	DATE_FORMAT                     = "2006-01-02"
 	YEARLY_REPORT_DATE_FORMAT       = "1/2"
-	LIFETIME_REPORT_DATE_FORMAT     = "2006/01/02"
+	LIFETIME_REPORT_DATE_FORMAT     = "2006/1/2"
 	DAY_OF_WEEK_FORMAT              = "Mon"
 	SEPARATOR                       = "======================\n"
 	DECIMAL_PLACES                  = 2
