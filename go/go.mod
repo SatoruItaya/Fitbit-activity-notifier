@@ -9,7 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.48.0
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.44.7
 	github.com/stretchr/testify v1.7.2
-	golang.org/x/oauth2 v0.15.0
+	golang.org/x/oauth2 v0.21.0
 )
 
 require (
