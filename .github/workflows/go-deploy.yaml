@@ -31,7 +31,7 @@ jobs:
       - name: Login to Amazon ECR
         run: aws ecr get-login-password --region ${{vars.AWS_REGION}} | docker login --username AWS --password-stdin ${{vars.AWS_ACCOUNT_ID}}.dkr.ecr.${{vars.AWS_REGION}}.amazonaws.com
       - name: Build Docker image
-        run: docker buildx build --platform=linux/arm64 -t ${{vars.AWS_ACCOUNT_ID}}.dkr.ecr.${{vars.AWS_REGION}}.amazonaws.com/${{vars.REPOSITORY_NAME}}:${{github.sha}}
+        run: docker buildx build --platform=linux/arm64 -t ${{vars.AWS_ACCOUNT_ID}}.dkr.ecr.${{vars.AWS_REGION}}.amazonaws.com/${{vars.REPOSITORY_NAME}}:${{github.sha}} .
       - name: Push Docker image to ECR
         run: docker push ${{vars.AWS_ACCOUNT_ID}}.dkr.ecr.${{vars.AWS_REGION}}.amazonaws.com/${{vars.REPOSITORY_NAME}}:${{github.sha}}
       - name: Deploy to Lambda
