@@ -21,21 +21,18 @@ The custom report contains following items,
 - Lambda funtion hits Fitbit API, extracts data, and create a custom report. After that, it sends a request to LINE Notify.
 - You can get a custom report via LINE.
 
-# Requirements
-- Python 3.7+
-- Terraform 0.14+
-
 # Advance preparation
 - You need to store following parameters in [Systems Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html),
     - Client ID for Fitbit
     - Client Secret for Fitbit
     - LINE Notify token.
-- These parameters are variables of Terraform, and set as Enviromment variables for Lambda.
+- These parameters are set as Enviromment variables for Lambda.
 
 # Structure
 ```
 .
-└── python
+├── go
+└── _python(NOT MAINTAINED)
     Python script for AWS Lamdba and Makefile to deploy
 ```
 
@@ -75,6 +72,13 @@ Top Records in Lifetime
 25,993(2018/03/17)
 25,702(2018/09/23)
 25,503(2018/03/11)
+```
+
+```
+Running Report
+
+Weekly Distance: 3.00km
+Yearly Distance: 10.00km`
 ```
 
 # References
