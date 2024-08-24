@@ -1,5 +1,20 @@
 {
   "extends": [
     "config:base"
+  ],
+  "automerge": true,
+  "major": {
+    "automerge": false
+  },
+  "labels": ["renovate"],
+  "ignorePaths": ["_python/**"],
+  "packageRules": [
+    {
+      "matchPackagePatterns": ["^golang$"],
+      "groupName": "Go and Docker base image",
+      "packageNames": ["golang"],
+      "matchManagers": ["gomod", "dockerfile"],
+      "extends": ["group:allNonMajor"]
+    }
   ]
 }
