@@ -85,17 +85,6 @@ func handler() error {
 
 	stepsReport := generateStepsReport(lifetimeStepsData, today)
 
-	lineNotifyTokenParameterName := os.Getenv("LINE_NOTIFY_TOKEN_PARAMETER_NAME")
-	lineNotifyToken, err := instances.getParameter(lineNotifyTokenParameterName)
-	if err != nil {
-		return err
-	}
-
-	err = sendReport(*lineNotifyToken, stepsReport)
-	if err != nil {
-		return err
-	}
-
 	activityList, err := getActivityList(context.TODO(), *newAccessToken, today)
 	if err != nil {
 		return err
@@ -108,7 +97,18 @@ func handler() error {
 
 	runningReport := generateRunningReport(yearlyRunningLog, today)
 
-	err = sendReport(*lineNotifyToken, runningReport)
+	lineChannelToken, err := instances.getParameter(os.Getenv("LINE_CHANNEL_TOKEN_PARAMETER_NAME"))
+	if err != nil {
+		return err
+	}
+	lineUserId, err := instances.getParameter(os.Getenv("LINE_USER_ID_PARAMETER_NAME"))
+	if err != nil {
+		return err
+	}
+
+	reports := []string{stepsReport, runningReport}
+
+	err = sendReports(*lineChannelToken, *lineUserId, reports)
 	if err != nil {
 		return err
 	}
