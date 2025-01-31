@@ -11,8 +11,9 @@ The custom report contains following items,
     - Fitbit account, Client ID, Client secret, Access token, Refresh token(Tokens are with a time limit.)
     - You can get them at [https://dev.fitbit.com/](https://dev.fitbit.com/). 
 - LINE 
-    - LINE account, [LINE Notify](https://notify-bot.line.me/ja/) token
-    - You can issue a token at My page.
+    - LINE account
+    - Provider, Channel, and Channel Access Token
+        - You can create these resources at [LINE Developers](https://developers.line.biz/ja/).
 - AWS
     - AWS account
 

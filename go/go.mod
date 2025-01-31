@@ -1,6 +1,8 @@
 module github.com/SatoruItaya/Fitbit-activity-notifier/go
 
-go 1.21.4
+go 1.22
+
+toolchain go1.23.4
 
 require (
 	github.com/aws/aws-lambda-go v1.47.0
@@ -8,6 +10,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.29.3
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.75.1
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.56.9
+	github.com/line/line-bot-sdk-go/v8 v8.10.3
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/oauth2 v0.25.0
 )
@@ -29,11 +32,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.33.11 // indirect
 	github.com/aws/smithy-go v1.22.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	golang.org/x/net v0.19.0 // indirect
-	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

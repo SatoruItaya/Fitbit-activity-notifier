@@ -1,12 +1,10 @@
 package main
 
 import (
-	"log"
 	"math"
-	"net/http"
-	"net/url"
 	"strconv"
-	"strings"
+
+	"github.com/line/line-bot-sdk-go/v8/linebot/messaging_api"
 )
 
 func roundToDecimal(num float64) float64 {
@@ -27,27 +25,30 @@ func formatNumberWithComma(number int) string {
 	return result
 }
 
-func sendReport(token string, report string) error {
-	apiUrl := "https://notify-api.line.me/api/notify"
-	u, err := url.ParseRequestURI(apiUrl)
+func sendReports(token string, userID string, reports []string) error {
+	bot, err := messaging_api.NewMessagingApiAPI(
+		token,
+	)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	c := &http.Client{}
-	form := url.Values{}
-	form.Add("message", report)
-	body := strings.NewReader(form.Encode())
-	req, err := http.NewRequest("POST", u.String(), body)
-	if err != nil {
-		log.Fatal(err)
+	var messageInterfaces []messaging_api.MessageInterface
+	for _, msg := range reports {
+		messageInterfaces = append(messageInterfaces, messaging_api.TextMessage{
+			Text: msg,
+		})
 	}
 
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Authorization", "Bearer "+token)
-	_, err = c.Do(req)
+	_, err = bot.PushMessage(
+		&messaging_api.PushMessageRequest{
+			To:       userID,
+			Messages: messageInterfaces,
+		},
+		"",
+	)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	return nil
