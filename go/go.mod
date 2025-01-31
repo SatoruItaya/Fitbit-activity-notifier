@@ -10,6 +10,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.29.3
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.75.1
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.56.9
+	github.com/line/line-bot-sdk-go/v8 v8.10.3
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/oauth2 v0.25.0
 )
