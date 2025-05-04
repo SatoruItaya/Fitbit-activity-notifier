@@ -20,7 +20,7 @@ jobs:
         with:
           go-version: 1.22
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v8
         with:
           version: v1.63.4
           working-directory: ${{ env.working-directory }}
