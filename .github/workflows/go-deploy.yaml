@@ -22,7 +22,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Configure AWS Credential
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: arn:aws:iam::${{vars.AWS_ACCOUNT_ID}}:role/${{vars.IAM_ROLE_NAME}}
           aws-region: ${{vars.AWS_REGION}}
