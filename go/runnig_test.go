@@ -5,17 +5,13 @@ import (
 	"time"
 )
 
-func newExercise(exerciseType string, startTime string, startUtcOffset string, distanceMillimeters *float64) Exercise {
+func newExercise(exerciseType string, startTime string, startUtcOffset string, distanceMillimeters float64) Exercise {
 	var e Exercise
 	e.ExerciseType = exerciseType
 	e.Interval.StartTime = startTime
 	e.Interval.StartUtcOffset = startUtcOffset
 	e.MetricsSummary.DistanceMillimeters = distanceMillimeters
 	return e
-}
-
-func float64Ptr(f float64) *float64 {
-	return &f
 }
 
 func TestExtractRunningLog(t *testing.T) {
@@ -28,12 +24,12 @@ func TestExtractRunningLog(t *testing.T) {
 
 	//success
 	exerciseList := []Exercise{
-		newExercise("RUNNING", "2024-03-04T11:09:59Z", "32400s", float64Ptr(3502289)),
-		newExercise("RUNNING", "2024-03-11T23:09:59Z", "32400s", float64Ptr(2603289)),
-		newExercise("RUNNING", "2023-03-12T11:09:59Z", "32400s", float64Ptr(2603289)),
+		newExercise("RUNNING", "2024-03-04T11:09:59Z", "32400s", 3502289),
+		newExercise("RUNNING", "2024-03-11T23:09:59Z", "32400s", 2603289),
+		newExercise("RUNNING", "2023-03-12T11:09:59Z", "32400s", 2603289),
 		// 2024-01-01 08:00 JST is 2023-12-31 in UTC, but it is in this year
-		newExercise("RUNNING", "2023-12-31T23:00:00Z", "32400s", float64Ptr(1000000)),
-		newExercise("WALKING", "2024-03-12T11:09:59Z", "32400s", nil),
+		newExercise("RUNNING", "2023-12-31T23:00:00Z", "32400s", 1000000),
+		newExercise("WALKING", "2024-03-12T11:09:59Z", "32400s", 0),
 	}
 
 	yearlyRunningLog, err := extractRunningLog(exerciseList, today)
@@ -68,7 +64,7 @@ func TestExtractRunningLog(t *testing.T) {
 	}
 
 	//missing exerciseType
-	_, err = extractRunningLog([]Exercise{newExercise("", "2024-03-04T11:09:59Z", "32400s", float64Ptr(3502289))}, today)
+	_, err = extractRunningLog([]Exercise{newExercise("", "2024-03-04T11:09:59Z", "32400s", 3502289)}, today)
 	if err == nil {
 		t.Errorf("Expected error for unable to extract exerciseType, but got nil")
 	} else if err.Error() != UnableToExtractExerciseType {
@@ -76,7 +72,7 @@ func TestExtractRunningLog(t *testing.T) {
 	}
 
 	//missing startTime
-	_, err = extractRunningLog([]Exercise{newExercise("RUNNING", "", "32400s", float64Ptr(3502289))}, today)
+	_, err = extractRunningLog([]Exercise{newExercise("RUNNING", "", "32400s", 3502289)}, today)
 	if err == nil {
 		t.Errorf("Expected error for unable to extract startTime, but got nil")
 	} else if err.Error() != UnableToExtractStartTime {
@@ -84,7 +80,7 @@ func TestExtractRunningLog(t *testing.T) {
 	}
 
 	//parse error
-	_, err = extractRunningLog([]Exercise{newExercise("RUNNING", "2024-03-32T11:09:59Z", "32400s", float64Ptr(3502289))}, today)
+	_, err = extractRunningLog([]Exercise{newExercise("RUNNING", "2024-03-32T11:09:59Z", "32400s", 3502289)}, today)
 	if err == nil {
 		t.Errorf("Expected error for parse, but got nil")
 	} else {
@@ -93,12 +89,15 @@ func TestExtractRunningLog(t *testing.T) {
 		}
 	}
 
-	//missing distance
-	_, err = extractRunningLog([]Exercise{newExercise("RUNNING", "2024-03-04T11:09:59Z", "32400s", nil)}, today)
-	if err == nil {
-		t.Errorf("Expected error for unable to extract distance, but got nil")
-	} else if err.Error() != UnableToExtractDistance {
-		t.Errorf("Expected %v, but got %v", UnableToExtractDistance, err)
+	//missing distance is treated as 0
+	yearlyRunningLog, err = extractRunningLog([]Exercise{newExercise("RUNNING", "2024-03-04T11:09:59Z", "32400s", 0)}, today)
+	if err != nil {
+		t.Errorf("Error in extractRunningLog: %v", err)
+	}
+	for _, v := range yearlyRunningLog {
+		if v != 0 {
+			t.Errorf("Expected 0, but got %v", v)
+		}
 	}
 }
 

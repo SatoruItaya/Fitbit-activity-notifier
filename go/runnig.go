@@ -20,7 +20,7 @@ type Exercise struct {
 	} `json:"interval"`
 	ExerciseType   string `json:"exerciseType"`
 	MetricsSummary struct {
-		DistanceMillimeters *float64 `json:"distanceMillimeters"`
+		DistanceMillimeters float64 `json:"distanceMillimeters"`
 	} `json:"metricsSummary"`
 }
 
@@ -86,11 +86,9 @@ func extractRunningLog(exerciseList []Exercise, today time.Time) (map[time.Time]
 		}
 
 		if exercise.ExerciseType == "RUNNING" {
-			if exercise.MetricsSummary.DistanceMillimeters == nil {
-				return nil, errors.New(UnableToExtractDistance)
-			}
 			// millimeters to kilometers
-			distance := *exercise.MetricsSummary.DistanceMillimeters / 1000000
+			// distanceMillimeters is omitted when it is 0 (e.g. manually logged runs without distance)
+			distance := exercise.MetricsSummary.DistanceMillimeters / 1000000
 
 			if startTime.Year() == today.Year() {
 				yearlyRunningLog[startTime] = distance

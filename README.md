@@ -33,20 +33,25 @@ The custom report contains following items,
 - These parameters are set as Enviromment variables for Lambda.
 
 # Get a refresh token
-1. Create an OAuth client (type: Web application) in your Google Cloud project, and add a redirect URI (e.g. `https://www.google.com`).
-2. Open the following URL in a browser and allow the access. `access_type=offline` and `prompt=consent` are necessary to get a refresh token.
+1. Enable the Google Health API in your Google Cloud project, and create an OAuth client (type: Web application) with a redirect URI (e.g. `https://www.google.com`).
+2. Configure Google Auth Platform.
+    - Audience: Add your Google account to "Test users".
+    - Data Access: Add the scope `https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly`.
+    - Branding: Set "Application home page", "Application privacy policy link" and "Authorized domains". They are required to publish the app.
+    - Audience: Click "Publish app" to change the publishing status to "In production". Verification is not necessary for personal use (unverified apps are limited to 100 users).
+3. Open the following URL in a browser and allow the access. `access_type=offline` and `prompt=consent` are necessary to get a refresh token.
     ```
     https://accounts.google.com/o/oauth2/v2/auth?client_id=<CLIENT_ID>&redirect_uri=https://www.google.com&response_type=code&access_type=offline&prompt=consent&scope=https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly
     ```
-3. Exchange the `code` in the redirected URL for tokens.
+4. Exchange the `code` in the redirected URL for tokens.
     ```
     curl -X POST https://oauth2.googleapis.com/token \
       -d code=<CODE> -d client_id=<CLIENT_ID> -d client_secret=<CLIENT_SECRET> \
       -d redirect_uri=https://www.google.com -d grant_type=authorization_code
     ```
-4. Put the `refresh_token` in the response on the S3 bucket.
+5. Put the `refresh_token` in the response on the S3 bucket.
 
-Note: While the publishing status of the OAuth consent screen is "Testing", refresh tokens expire in 7 days.
+Note: While the publishing status is "Testing", refresh tokens expire in 7 days. If the token response contains `refresh_token_expires_in`, the app is still in "Testing".
 
 # Structure
 ```
