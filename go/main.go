@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	LIMIT_DAYS                  int = 1095
+	LIMIT_DAYS                  int = 90
 	DATE_FORMAT                     = "2006-01-02"
 	YEARLY_REPORT_DATE_FORMAT       = "1/2"
 	LIFETIME_REPORT_DATE_FORMAT     = "2006/1/2"
@@ -85,12 +85,12 @@ func handler() error {
 
 	stepsReport := generateStepsReport(lifetimeStepsData, today)
 
-	activityList, err := getActivityList(context.TODO(), *newAccessToken, today)
+	exerciseList, err := getExerciseList(context.TODO(), *newAccessToken, today)
 	if err != nil {
 		return err
 	}
 
-	yearlyRunningLog, err := extractRunningLog(activityList, today)
+	yearlyRunningLog, err := extractRunningLog(exerciseList, today)
 	if err != nil {
 		return err
 	}

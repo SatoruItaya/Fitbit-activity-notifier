@@ -1,15 +1,18 @@
 # Fitbit-activity-notifier
 
 The Fitbit-activity-notifier notifies you of a custom [Fitbit](https://www.fitbit.com/global/us/home) weekly report via [LINE](https://line.me/en/).
+Data is fetched from the [Google Health API](https://developers.google.com/health) (the successor of the Fitbit Web API).
 The custom report contains following items,
 - Weekly report of steps
 - Top records of steps in this year
 - Top records of steps in lifetime.
 
 # Necessary things
-- Fitbit
-    - Fitbit account, Client ID, Client secret, Access token, Refresh token(Tokens are with a time limit.)
-    - You can get them at [https://dev.fitbit.com/](https://dev.fitbit.com/). 
+- Google Health API
+    - Google account linked to your Fitbit data
+    - Google Cloud project with the Google Health API enabled
+    - OAuth client (Client ID, Client secret) and a refresh token with the scope `https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly`
+    - See [Get a refresh token](#get-a-refresh-token).
 - LINE 
     - LINE account
     - Provider, Channel, and Channel Access Token
@@ -19,15 +22,31 @@ The custom report contains following items,
 
 # Overview of Architecture
 - A trigger is [CloudWatch Events](https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/WhatIsCloudWatchEvents.html) and invoke [Lambda](https://aws.amazon.com/lambda/?nc1=h_ls) funtion.
-- Lambda funtion hits Fitbit API, extracts data, and create a custom report. After that, it sends a request to LINE Notify.
+- Lambda funtion hits Google Health API, extracts data, and create a custom report. After that, it sends a request to LINE Messaging API.
 - You can get a custom report via LINE.
 
 # Advance preparation
 - You need to store following parameters in [Systems Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html),
-    - Client ID for Fitbit
-    - Client Secret for Fitbit
-    - LINE Notify token.
+    - OAuth Client ID for Google Health API
+    - OAuth Client Secret for Google Health API
+    - LINE channel access token and user ID.
 - These parameters are set as Enviromment variables for Lambda.
+
+# Get a refresh token
+1. Create an OAuth client (type: Web application) in your Google Cloud project, and add a redirect URI (e.g. `https://www.google.com`).
+2. Open the following URL in a browser and allow the access. `access_type=offline` and `prompt=consent` are necessary to get a refresh token.
+    ```
+    https://accounts.google.com/o/oauth2/v2/auth?client_id=<CLIENT_ID>&redirect_uri=https://www.google.com&response_type=code&access_type=offline&prompt=consent&scope=https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly
+    ```
+3. Exchange the `code` in the redirected URL for tokens.
+    ```
+    curl -X POST https://oauth2.googleapis.com/token \
+      -d code=<CODE> -d client_id=<CLIENT_ID> -d client_secret=<CLIENT_SECRET> \
+      -d redirect_uri=https://www.google.com -d grant_type=authorization_code
+    ```
+4. Put the `refresh_token` in the response on the S3 bucket.
+
+Note: While the publishing status of the OAuth consent screen is "Testing", refresh tokens expire in 7 days.
 
 # Structure
 ```
@@ -83,6 +102,6 @@ Yearly Distance: 10.00km`
 ```
 
 # References
-- [Web API Reference](https://dev.fitbit.com/build/reference/web-api/)
-- [Fitbit Web API(Swagger UI)](https://dev.fitbit.com/build/reference/web-api/explore/)
+- [Google Health API](https://developers.google.com/health)
+- [Migration guide from Fitbit Web API](https://developers.google.com/health/migration)
 - [orcasgit/python-fitbit](https://github.com/orcasgit/python-fitbit)

@@ -9,16 +9,16 @@ import (
 )
 
 // Interface for the mock function
-type StepsByDateRangeFunc func(ctx context.Context, access_token string, startDate, endDate string) (map[string][]map[string]string, error)
+type StepsByDateRangeFunc func(ctx context.Context, access_token string, startDate, endDate time.Time) (map[time.Time]int, error)
 
 // Mock function
-func mockGetStepsByDateRange(ctx context.Context, access_token string, startDate, endDate string) (map[string][]map[string]string, error) {
+func mockGetStepsByDateRange(ctx context.Context, access_token string, startDate, endDate time.Time) (map[time.Time]int, error) {
 	// Return dummy data for testing
-	mockData := map[string][]map[string]string{
-		"activities-steps": {
-			{"dateTime": "2024-03-01", "value": "1000"},
-			{"dateTime": "2024-03-02", "value": "1500"},
-		},
+	mockData := map[time.Time]int{}
+	for d := startDate; d.Before(endDate); d = d.AddDate(0, 0, 1) {
+		if d.Year() == 2024 && d.Month() == time.March && d.Day() <= 2 {
+			mockData[d] = 1000 + 500*(d.Day()-1)
+		}
 	}
 	return mockData, nil
 }
@@ -27,6 +27,10 @@ func TestGetLifetimeStepsHistory(t *testing.T) {
 	// Test input data
 	access_token := "test_token"
 	today := time.Date(2024, time.March, 3, 0, 0, 0, 0, time.Local)
+
+	originalStartDate := startDateParse
+	startDateParse = time.Date(2023, time.January, 1, 0, 0, 0, 0, time.UTC)
+	defer func() { startDateParse = originalStartDate }()
 
 	// Register the mock function
 	var getStepsByDateRange StepsByDateRangeFunc = mockGetStepsByDateRange
@@ -119,5 +123,32 @@ Top Records in Lifetime
 
 	if expected != actual {
 		t.Errorf("Expected %v, but got %v", expected, actual)
+	}
+}
+
+func TestGetLifetimeStepsHistoryChunks(t *testing.T) {
+	today := time.Date(2024, time.March, 3, 15, 0, 0, 0, time.Local)
+
+	originalStartDate := startDateParse
+	startDateParse = time.Date(2023, time.January, 1, 0, 0, 0, 0, time.UTC)
+	defer func() { startDateParse = originalStartDate }()
+
+	var ranges [][2]time.Time
+	mock := func(ctx context.Context, access_token string, startDate, endDate time.Time) (map[time.Time]int, error) {
+		ranges = append(ranges, [2]time.Time{startDate, endDate})
+		return map[time.Time]int{}, nil
+	}
+
+	_, err := getLifetimeStepsHistory(context.Background(), "test_token", today, mock)
+	assert.NoError(t, err)
+
+	// Ranges must be contiguous, within LIMIT_DAYS, and cover [startDate, today)
+	assert.Equal(t, time.Date(2024, time.March, 3, 0, 0, 0, 0, time.Local), ranges[0][1])
+	assert.Equal(t, time.Date(2023, time.January, 1, 0, 0, 0, 0, time.Local), ranges[len(ranges)-1][0])
+	for i, r := range ranges {
+		assert.LessOrEqual(t, int(r[1].Sub(r[0]).Hours()/24+0.5), LIMIT_DAYS)
+		if i > 0 {
+			assert.Equal(t, ranges[i-1][0], r[1])
+		}
 	}
 }

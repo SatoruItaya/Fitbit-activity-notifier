@@ -2,101 +2,97 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 )
 
-func getActivityList(ctx context.Context, access_token string, today time.Time) ([]interface{}, error) {
-	apiUrl := "https://api.fitbit.com/1/user/-/activities/list.json"
-	client := &http.Client{}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiUrl, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Fitbit API request: %v", err)
-	}
-	req.Header.Add("Authorization", "Bearer "+access_token)
+const EXERCISE_PAGE_SIZE = 25
 
-	thisYear, _ := strconv.Atoi(today.Format("2006"))
-	targetDate := today
-	baseDate := time.Date(thisYear-1, time.December, 31, 23, 59, 59, 999, time.UTC)
-
-	var activityList []interface{}
-
-	for targetDate.After(baseDate) {
-		query := req.URL.Query()
-		query.Set("beforeDate", targetDate.Format(DATE_FORMAT))
-		query.Set("sort", "desc")
-		query.Set("limit", "100")
-		query.Set("offset", "0")
-		req.URL.RawQuery = query.Encode()
-
-		resp, err := client.Do(req)
-		if err != nil {
-			return nil, fmt.Errorf("failed to call Fitbit API: %v", err)
-		}
-		defer resp.Body.Close()
-
-		var activityLogList map[string]interface{}
-		if err := json.NewDecoder(resp.Body).Decode(&activityLogList); err != nil {
-			return nil, fmt.Errorf("failed to decode Fitbit API response: %v", err)
-		}
-
-		activities, ok := activityLogList["activities"].([]interface{})
-		if !ok {
-			return nil, errors.New("unable to extract activities")
-		}
-
-		activityList = append(activityList, activities...)
-
-		// get statTime for last element
-		t, ok := activities[len(activities)-1].(map[string]interface{})["startTime"].(string)
-		if !ok {
-			return nil, errors.New("unable to extract date")
-		}
-
-		startTime, err := time.Parse("2006-01-02T15:04:05.000-07:00", t)
-		if err != nil {
-			return nil, err
-		}
-
-		targetDate = startTime
-	}
-	return activityList, nil
+type Exercise struct {
+	Interval struct {
+		StartTime      string `json:"startTime"`
+		StartUtcOffset string `json:"startUtcOffset"`
+	} `json:"interval"`
+	ExerciseType   string `json:"exerciseType"`
+	MetricsSummary struct {
+		DistanceMillimeters *float64 `json:"distanceMillimeters"`
+	} `json:"metricsSummary"`
 }
 
-func extractRunningLog(activitiesList []interface{}, today time.Time) (map[time.Time]float64, error) {
+type exerciseListResponse struct {
+	DataPoints []struct {
+		Exercise Exercise `json:"exercise"`
+	} `json:"dataPoints"`
+	NextPageToken string `json:"nextPageToken"`
+}
+
+// getExerciseList returns exercises started in this year.
+func getExerciseList(ctx context.Context, access_token string, today time.Time) ([]Exercise, error) {
+	query := url.Values{}
+	query.Set("filter", `exercise.interval.civil_start_time >= "`+strconv.Itoa(today.Year())+`-01-01"`)
+	query.Set("pageSize", strconv.Itoa(EXERCISE_PAGE_SIZE))
+
+	var exerciseList []Exercise
+
+	for {
+		apiUrl := healthAPIBaseURL + "/exercise/dataPoints?" + strings.ReplaceAll(query.Encode(), "+", "%20")
+
+		var responseData exerciseListResponse
+		if err := callHealthAPI(ctx, access_token, http.MethodGet, apiUrl, nil, &responseData); err != nil {
+			return nil, err
+		}
+
+		for _, dataPoint := range responseData.DataPoints {
+			exerciseList = append(exerciseList, dataPoint.Exercise)
+		}
+
+		if responseData.NextPageToken == "" {
+			break
+		}
+		query.Set("pageToken", responseData.NextPageToken)
+	}
+
+	return exerciseList, nil
+}
+
+func extractRunningLog(exerciseList []Exercise, today time.Time) (map[time.Time]float64, error) {
 	yearlyRunningLog := map[time.Time]float64{}
 
-	thisYear, _ := strconv.Atoi(today.Format("2006"))
-	baseDate := time.Date(thisYear-1, time.December, 31, 23, 59, 59, 999, time.UTC)
-
-	for _, a := range activitiesList {
-		activity := a.(map[string]interface{})
-		activityName, ok := activity["activityName"].(string)
-		if !ok {
-			return nil, errors.New(UnableToExtractAcitivityName)
+	for _, exercise := range exerciseList {
+		if exercise.ExerciseType == "" {
+			return nil, errors.New(UnableToExtractExerciseType)
 		}
 
-		t, ok := activity["startTime"].(string)
-		if !ok {
+		if exercise.Interval.StartTime == "" {
 			return nil, errors.New(UnableToExtractStartTime)
 		}
-		startTime, err := time.Parse("2006-01-02T15:04:05.000-07:00", t)
+		startTime, err := time.Parse(time.RFC3339, exercise.Interval.StartTime)
 		if err != nil {
 			return nil, err
 		}
 
-		if activityName == "Run" {
-			distance, ok := activity["distance"].(float64)
-			if !ok {
+		// startTime is UTC, so convert it to the local time of the exercise
+		if exercise.Interval.StartUtcOffset != "" {
+			offset, err := time.ParseDuration(exercise.Interval.StartUtcOffset)
+			if err != nil {
+				return nil, err
+			}
+			startTime = startTime.In(time.FixedZone("", int(offset.Seconds())))
+		}
+
+		if exercise.ExerciseType == "RUNNING" {
+			if exercise.MetricsSummary.DistanceMillimeters == nil {
 				return nil, errors.New(UnableToExtractDistance)
 			}
+			// millimeters to kilometers
+			distance := *exercise.MetricsSummary.DistanceMillimeters / 1000000
 
-			if startTime.After(baseDate) {
+			if startTime.Year() == today.Year() {
 				yearlyRunningLog[startTime] = distance
 			}
 		}
