@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"math"
 	"net/http"
 	"sort"
@@ -11,72 +9,102 @@ import (
 	"time"
 )
 
-func getLifetimeStepsHistory(ctx context.Context, access_token string, today time.Time, getStepsFunc func(context.Context, string, string, string) (map[string][]map[string]string, error)) (map[time.Time]int, error) {
-	// Number of target days
-	restTargetDays := int(today.Sub(startDateParse).Hours() / 24)
-	count := 0
+func getLifetimeStepsHistory(ctx context.Context, access_token string, today time.Time, getStepsFunc func(context.Context, string, time.Time, time.Time) (map[time.Time]int, error)) (map[time.Time]int, error) {
+	// Target range is [startDate, today)
+	startDate := time.Date(startDateParse.Year(), startDateParse.Month(), startDateParse.Day(), 0, 0, 0, 0, time.Local)
+	endDate := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.Local)
 
 	lifetimeStepsData := map[time.Time]int{}
 
-	for restTargetDays > 0 {
-		tmpEndDate := today.Add(-24 * time.Hour * time.Duration(1+LIMIT_DAYS*count))
-
-		var tmpStartDate time.Time
-		if restTargetDays > LIMIT_DAYS {
-			tmpStartDate = tmpEndDate.Add(-24 * time.Hour * time.Duration(LIMIT_DAYS-1))
-		} else {
-			tmpStartDate = startDateParse
+	// Google Health API accepts up to LIMIT_DAYS days per request
+	for tmpEndDate := endDate; tmpEndDate.After(startDate); {
+		tmpStartDate := tmpEndDate.AddDate(0, 0, -LIMIT_DAYS)
+		if tmpStartDate.Before(startDate) {
+			tmpStartDate = startDate
 		}
 
-		tmpStepsData, err := getStepsFunc(ctx, access_token, tmpStartDate.Format(DATE_FORMAT), tmpEndDate.Format(DATE_FORMAT))
+		tmpStepsData, err := getStepsFunc(ctx, access_token, tmpStartDate, tmpEndDate)
 		if err != nil {
 			return nil, err
 		}
 
-		for _, dailyHistory := range tmpStepsData["activities-steps"] {
-			dateTime, err := time.Parse(DATE_FORMAT, dailyHistory["dateTime"])
-			if err != nil {
-				return nil, err
-			}
-
-			dateTime = time.Date(dateTime.Year(), dateTime.Month(), dateTime.Day(), 0, 0, 0, 0, time.Local)
-
-			step, err := strconv.Atoi(dailyHistory["value"])
-			if err != nil {
-				return nil, err
-			}
-
-			lifetimeStepsData[dateTime] = step
+		for date, step := range tmpStepsData {
+			lifetimeStepsData[date] = step
 		}
 
-		restTargetDays -= LIMIT_DAYS
-		count += 1
+		tmpEndDate = tmpStartDate
 	}
 
 	return lifetimeStepsData, nil
 }
 
-func getStepsByDateRange(ctx context.Context, access_token string, startDate string, endDate string) (map[string][]map[string]string, error) {
-	apiUrl := "https://api.fitbit.com/1/user/-/activities/steps/date/" + startDate + "/" + endDate + ".json"
-	client := &http.Client{}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiUrl, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Fitbit API request: %v", err)
+type dailyRollUpRequest struct {
+	Range struct {
+		Start CivilDateTime `json:"start"`
+		End   CivilDateTime `json:"end"`
+	} `json:"range"`
+	WindowSizeDays int    `json:"windowSizeDays"`
+	PageSize       int    `json:"pageSize"`
+	PageToken      string `json:"pageToken,omitempty"`
+}
+
+type dailyRollUpResponse struct {
+	RollupDataPoints []struct {
+		CivilStartTime CivilDateTime `json:"civilStartTime"`
+		// Steps is omitted for days without data
+		Steps *struct {
+			CountSum string `json:"countSum"`
+		} `json:"steps"`
+	} `json:"rollupDataPoints"`
+	NextPageToken string `json:"nextPageToken"`
+}
+
+func toCivilDateTime(t time.Time) CivilDateTime {
+	return CivilDateTime{Date: CivilDate{Year: t.Year(), Month: int(t.Month()), Day: t.Day()}}
+}
+
+// getStepsByDateRange returns daily steps in [startDate, endDate).
+func getStepsByDateRange(ctx context.Context, access_token string, startDate time.Time, endDate time.Time) (map[time.Time]int, error) {
+	apiUrl := healthAPIBaseURL + "/steps/dataPoints:dailyRollUp"
+
+	requestBody := dailyRollUpRequest{
+		WindowSizeDays: 1,
+		PageSize:       LIMIT_DAYS,
+	}
+	requestBody.Range.Start = toCivilDateTime(startDate)
+	requestBody.Range.End = toCivilDateTime(endDate)
+
+	stepsData := map[time.Time]int{}
+
+	for {
+		var responseData dailyRollUpResponse
+		if err := callHealthAPI(ctx, access_token, http.MethodPost, apiUrl, requestBody, &responseData); err != nil {
+			return nil, err
+		}
+
+		for _, dataPoint := range responseData.RollupDataPoints {
+			d := dataPoint.CivilStartTime.Date
+			dateTime := time.Date(d.Year, time.Month(d.Month), d.Day, 0, 0, 0, 0, time.Local)
+
+			step := 0
+			if dataPoint.Steps != nil {
+				var err error
+				step, err = strconv.Atoi(dataPoint.Steps.CountSum)
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			stepsData[dateTime] = step
+		}
+
+		if responseData.NextPageToken == "" {
+			break
+		}
+		requestBody.PageToken = responseData.NextPageToken
 	}
 
-	req.Header.Add("Authorization", "Bearer "+access_token)
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to call Fitbit API: %v", err)
-	}
-	defer resp.Body.Close()
-
-	var responseData map[string][]map[string]string
-	if err := json.NewDecoder(resp.Body).Decode(&responseData); err != nil {
-		return nil, fmt.Errorf("failed to decode Fitbit API response: %v", err)
-	}
-
-	return responseData, nil
+	return stepsData, nil
 }
 
 func generateStepsReport(lifetimeStepsData map[time.Time]int, today time.Time) string {

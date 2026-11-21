@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"io"
-	"os"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -43,23 +43,24 @@ func (instances *Instances) getRefreshToken() (*string, error) {
 		return nil, err
 	}
 
-	refreshToken := string(body)
+	refreshToken := strings.TrimSpace(string(body))
 
 	return &refreshToken, nil
 }
 
-func getFitbitConfig(clientID string, clientSecret string) *oauth2.Config {
+func getGoogleOAuthConfig(clientID string, clientSecret string) *oauth2.Config {
 	return &oauth2.Config{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
 		Endpoint: oauth2.Endpoint{
-			TokenURL: "https://api.fitbit.com/oauth2/token",
+			TokenURL:  "https://oauth2.googleapis.com/token",
+			AuthStyle: oauth2.AuthStyleInParams,
 		},
 	}
 }
 
 func (instances *Instances) refreshAccessToken(ctx context.Context, clientID string, clientSecret string, refreshToken string) (*string, error) {
-	config := getFitbitConfig(clientID, clientSecret)
+	config := getGoogleOAuthConfig(clientID, clientSecret)
 	token := &oauth2.Token{
 		RefreshToken: refreshToken,
 	}
@@ -69,34 +70,16 @@ func (instances *Instances) refreshAccessToken(ctx context.Context, clientID str
 		return nil, err
 	}
 
-	tempFileName := "/tmp/" + *refreshCbBucketName
-
-	tempFile, err := os.Create(tempFileName)
-	if err != nil {
-		return nil, err
-	}
-	defer tempFile.Close()
-
-	newRefreshToken := newToken.RefreshToken
-	data := []byte(newRefreshToken)
-	_, err = tempFile.Write(data)
-	if err != nil {
-		return nil, err
-	}
-
-	file, err := os.Open(tempFileName)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	_, err = instances.S3Client.PutObject(context.TODO(), &s3.PutObjectInput{
-		Bucket: refreshCbBucketName,
-		Key:    refreshCbFileName,
-		Body:   file,
-	})
-	if err != nil {
-		return nil, err
+	// Google usually does not rotate refresh tokens, so save it only when a new one is issued
+	if newToken.RefreshToken != "" && newToken.RefreshToken != refreshToken {
+		_, err = instances.S3Client.PutObject(ctx, &s3.PutObjectInput{
+			Bucket: refreshCbBucketName,
+			Key:    refreshCbFileName,
+			Body:   strings.NewReader(newToken.RefreshToken),
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &newToken.AccessToken, nil

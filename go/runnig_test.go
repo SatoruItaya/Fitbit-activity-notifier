@@ -5,73 +5,82 @@ import (
 	"time"
 )
 
+func newExercise(exerciseType string, startTime string, startUtcOffset string, distanceMillimeters float64) Exercise {
+	var e Exercise
+	e.ExerciseType = exerciseType
+	e.Interval.StartTime = startTime
+	e.Interval.StartUtcOffset = startUtcOffset
+	e.MetricsSummary.DistanceMillimeters = distanceMillimeters
+	return e
+}
+
 func TestExtractRunningLog(t *testing.T) {
-	var activityList []interface{}
 	today := time.Date(2024, time.March, 13, 23, 59, 59, 999, time.UTC)
+	jst := time.FixedZone("", 9*60*60)
 
-	startTime2024Running1String := "2024-03-04T20:09:59.000+09:00"
-	startTime2024Running2String := "2024-03-12T20:09:59.000+09:00"
-	startTime2024Running1Time, _ := time.Parse("2006-01-02T15:04:05.000-07:00", startTime2024Running1String)
-	startTime2024Running2Time, _ := time.Parse("2006-01-02T15:04:05.000-07:00", startTime2024Running2String)
-
-	distance2024Running1Float := 3.502289
-	distance2024Running2Float := 2.603289
+	running1Time := time.Date(2024, time.March, 4, 20, 9, 59, 0, jst)
+	// 2024-03-12 08:09:59 JST is 2024-03-11 in UTC
+	running2Time := time.Date(2024, time.March, 12, 8, 9, 59, 0, jst)
 
 	//success
-	activityList = append(activityList,
-		map[string]interface{}{"activityName": "Run", "startTime": startTime2024Running1String, "distance": distance2024Running1Float},
-		map[string]interface{}{"activityName": "Run", "startTime": startTime2024Running2String, "distance": distance2024Running2Float},
-		map[string]interface{}{"activityName": "Run", "startTime": "2023-03-12T20:09:59.000+09:00", "distance": 2.603289},
-		map[string]interface{}{"activityName": "Walk", "startTime": "2024-03-12T20:09:59.000+09:00", "distance": "false"},
-	)
+	exerciseList := []Exercise{
+		newExercise("RUNNING", "2024-03-04T11:09:59Z", "32400s", 3502289),
+		newExercise("RUNNING", "2024-03-11T23:09:59Z", "32400s", 2603289),
+		newExercise("RUNNING", "2023-03-12T11:09:59Z", "32400s", 2603289),
+		// 2024-01-01 08:00 JST is 2023-12-31 in UTC, but it is in this year
+		newExercise("RUNNING", "2023-12-31T23:00:00Z", "32400s", 1000000),
+		newExercise("WALKING", "2024-03-12T11:09:59Z", "32400s", 0),
+	}
 
-	yearlyRunningLog, err := extractRunningLog(activityList, today)
+	yearlyRunningLog, err := extractRunningLog(exerciseList, today)
 	if err != nil {
 		t.Errorf("Error in extractRunningLog: %v", err)
 	}
 
-	if len(yearlyRunningLog) != 2 {
-		t.Errorf("Expected 2 elements, but got %v element(s)", len(yearlyRunningLog))
+	if len(yearlyRunningLog) != 3 {
+		t.Errorf("Expected 3 elements, but got %v element(s)", len(yearlyRunningLog))
 	}
 
-	if yearlyRunningLog[startTime2024Running1Time] != distance2024Running1Float {
-		t.Errorf("Expected %v, but got %v", distance2024Running1Float, yearlyRunningLog[startTime2024Running1Time])
+	for k, v := range yearlyRunningLog {
+		switch {
+		case k.Equal(running1Time):
+			if v != 3.502289 {
+				t.Errorf("Expected %v, but got %v", 3.502289, v)
+			}
+			if k.Format(YEARLY_REPORT_DATE_FORMAT) != "3/4" {
+				t.Errorf("Expected local date 3/4, but got %v", k.Format(YEARLY_REPORT_DATE_FORMAT))
+			}
+		case k.Equal(running2Time):
+			if v != 2.603289 {
+				t.Errorf("Expected %v, but got %v", 2.603289, v)
+			}
+			if k.Format(YEARLY_REPORT_DATE_FORMAT) != "3/12" {
+				t.Errorf("Expected local date 3/12, but got %v", k.Format(YEARLY_REPORT_DATE_FORMAT))
+			}
+		case v == 1:
+		default:
+			t.Errorf("Unexpected element %v: %v", k, v)
+		}
 	}
 
-	if yearlyRunningLog[startTime2024Running2Time] != distance2024Running2Float {
-		t.Errorf("Expected %v, but got %v", distance2024Running2Float, yearlyRunningLog[startTime2024Running2Time])
-	}
-
-	//missing activityName
-	var activityListMissingActiveName []interface{}
-	activityListMissingActiveName = append(activityListMissingActiveName,
-		map[string]interface{}{"startTime": startTime2024Running1String, "distance": distance2024Running1Float},
-	)
-	_, err = extractRunningLog(activityListMissingActiveName, today)
+	//missing exerciseType
+	_, err = extractRunningLog([]Exercise{newExercise("", "2024-03-04T11:09:59Z", "32400s", 3502289)}, today)
 	if err == nil {
-		t.Errorf("Expected error for unable to extract activityName, but got nil")
-	} else if err.Error() != UnableToExtractAcitivityName {
-		t.Errorf("Expected %v, but got %T", UnableToExtractAcitivityName, err)
+		t.Errorf("Expected error for unable to extract exerciseType, but got nil")
+	} else if err.Error() != UnableToExtractExerciseType {
+		t.Errorf("Expected %v, but got %v", UnableToExtractExerciseType, err)
 	}
 
 	//missing startTime
-	var activityListMissingStartTime []interface{}
-	activityListMissingStartTime = append(activityListMissingStartTime,
-		map[string]interface{}{"activityName": "Run", "distance": distance2024Running1Float},
-	)
-	_, err = extractRunningLog(activityListMissingStartTime, today)
+	_, err = extractRunningLog([]Exercise{newExercise("RUNNING", "", "32400s", 3502289)}, today)
 	if err == nil {
 		t.Errorf("Expected error for unable to extract startTime, but got nil")
 	} else if err.Error() != UnableToExtractStartTime {
-		t.Errorf("Expected %v, but got %T", UnableToExtractStartTime, err)
+		t.Errorf("Expected %v, but got %v", UnableToExtractStartTime, err)
 	}
 
 	//parse error
-	var activityListParseError []interface{}
-	activityListParseError = append(activityListParseError,
-		map[string]interface{}{"activityName": "Run", "startTime": "2024-03-32T20:09:59.000+09:00", "distance": distance2024Running1Float},
-	)
-	_, err = extractRunningLog(activityListParseError, today)
+	_, err = extractRunningLog([]Exercise{newExercise("RUNNING", "2024-03-32T11:09:59Z", "32400s", 3502289)}, today)
 	if err == nil {
 		t.Errorf("Expected error for parse, but got nil")
 	} else {
@@ -80,16 +89,15 @@ func TestExtractRunningLog(t *testing.T) {
 		}
 	}
 
-	//missing distance
-	var activityListMissingDistance []interface{}
-	activityListMissingDistance = append(activityListMissingDistance,
-		map[string]interface{}{"activityName": "Run", "startTime": "2024-03-30T20:09:59.000+09:00"},
-	)
-	_, err = extractRunningLog(activityListMissingDistance, today)
-	if err == nil {
-		t.Errorf("Expected error for unable to extract distance, but got nil")
-	} else if err.Error() != UnableToExtractDistance {
-		t.Errorf("Expected %v, but got %T", UnableToExtractDistance, err)
+	//missing distance is treated as 0
+	yearlyRunningLog, err = extractRunningLog([]Exercise{newExercise("RUNNING", "2024-03-04T11:09:59Z", "32400s", 0)}, today)
+	if err != nil {
+		t.Errorf("Error in extractRunningLog: %v", err)
+	}
+	for _, v := range yearlyRunningLog {
+		if v != 0 {
+			t.Errorf("Expected 0, but got %v", v)
+		}
 	}
 }
 
