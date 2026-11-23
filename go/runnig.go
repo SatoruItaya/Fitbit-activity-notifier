@@ -110,12 +110,15 @@ func generateRunningReport(yearlyRunningLog map[time.Time]float64, today time.Ti
 
 	yearlyDistance := 0.0
 	weeklyDistance := 0.0
-	weekStartDate := today.AddDate(0, 0, -7).Add(-time.Nanosecond)
-	weekEndDate := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
+	// Weekly report covers the 7 days before today (same as steps report).
+	// Compare by date because each start time is in the local time of the exercise.
+	weekStartDate := time.Date(today.Year(), today.Month(), today.Day()-7, 0, 0, 0, 0, time.UTC)
+	weekEndDate := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.UTC)
 	report := "\n" + SEPARATOR + "Running Report\n"
 
 	for _, k := range keys {
-		if k.After(weekStartDate) && k.Before(weekEndDate) {
+		date := time.Date(k.Year(), k.Month(), k.Day(), 0, 0, 0, 0, time.UTC)
+		if !date.Before(weekStartDate) && date.Before(weekEndDate) {
 			report += k.Format(YEARLY_REPORT_DATE_FORMAT) + " " + k.Format(DAY_OF_WEEK_FORMAT) + " " + strconv.FormatFloat(roundToDecimal(yearlyRunningLog[k]), 'f', -1, 64) + "km\n"
 			weeklyDistance += yearlyRunningLog[k]
 		}
