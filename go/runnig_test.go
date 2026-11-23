@@ -125,6 +125,56 @@ Yearly Distance: 18.24km`
 		t.Errorf("Expected %v, but got %v", expected, actual)
 	}
 
+	// Runs in the morning of the first day of the week are included,
+	// and runs on the day before the week and on today are excluded
+	today = time.Date(2025, time.January, 26, 12, 0, 0, 000, time.UTC)
+	yearlyRunningLog = map[time.Time]float64{
+		time.Date(2025, time.January, 18, 23, 0, 0, 0, time.UTC):    1.01,
+		time.Date(2025, time.January, 19, 8, 0, 0, 0, time.UTC):     10.06,
+		time.Date(2025, time.January, 19, 12, 59, 59, 0, time.UTC):  5.03,
+		time.Date(2025, time.January, 26, 8, 0, 0, 0, time.UTC):     2.02,
+		time.Date(2025, time.January, 2, 23, 59, 59, 999, time.UTC): 19.46,
+	}
+
+	expected = `
+======================
+Running Report
+1/19 Sun 10.06km
+1/19 Sun 5.03km
+
+Weekly Distance: 15.09km
+Yearly Distance: 37.58km`
+
+	actual = generateRunningReport(yearlyRunningLog, today)
+	if expected != actual {
+		t.Errorf("Expected %v, but got %v", expected, actual)
+	}
+
+	// Lambda runs in UTC (Sunday 12:00 JST is Sunday 03:00 UTC),
+	// and start times are in the local time of each run (JST)
+	jst := time.FixedZone("", 9*60*60)
+	today = time.Date(2026, time.November, 22, 3, 0, 0, 0, time.UTC)
+	yearlyRunningLog = map[time.Time]float64{
+		time.Date(2026, time.November, 14, 23, 0, 0, 0, jst): 1.01,
+		time.Date(2026, time.November, 15, 7, 0, 0, 0, jst):  5.5,
+		time.Date(2026, time.November, 21, 23, 0, 0, 0, jst): 3.3,
+		time.Date(2026, time.November, 22, 7, 0, 0, 0, jst):  2.02,
+	}
+
+	expected = `
+======================
+Running Report
+11/15 Sun 5.5km
+11/21 Sat 3.3km
+
+Weekly Distance: 8.8km
+Yearly Distance: 11.83km`
+
+	actual = generateRunningReport(yearlyRunningLog, today)
+	if expected != actual {
+		t.Errorf("Expected %v, but got %v", expected, actual)
+	}
+
 	// There are no runnning activities foa a week
 	yearlyRunningLog = map[time.Time]float64{
 		time.Date(2024, time.January, 2, 23, 59, 59, 999, time.UTC): 10.08,
